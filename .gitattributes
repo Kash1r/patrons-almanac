@@ -1,0 +1,4 @@
+* text=auto eol=lf
+packages/api-client/src/generated/** linguist-generated=true
+packages/api-client/openapi/spec.json linguist-generated=true
+apps/web/src/styles/*.gen.* linguist-generated=true

@@ -1,0 +1,15 @@
+{
+  "name": "patrons-almanac",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "gen": "pnpm -r --if-present gen",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build"
+  }
+}
