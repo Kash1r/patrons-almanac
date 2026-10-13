@@ -101,9 +101,14 @@ Current phase: **Phase 0**.
 
 ## Commands
 
-Fill in as they exist:
-
 - Install: `pnpm install`
 - Dev server: `pnpm --filter web dev`
+- Typecheck: `pnpm typecheck`
 - Tests: `pnpm test`
-- Regenerate API client: TODO
+- Build: `pnpm build`
+- Regenerate API client and token CSS from the committed sources: `pnpm gen`
+- Pull the latest API spec, then regenerate: `pnpm --filter @almanac/api-client spec:pull && pnpm gen`
+- Live API test: `ALMANAC_LIVE=1 pnpm --filter @almanac/api-client test test/live.test.ts`
+- E2E: `pnpm --filter web e2e`. It builds and starts the app unless one already runs on port 3000.
+  Set `E2E_BASE_URL` to test a deploy. Install the browser once with
+  `pnpm --filter web exec playwright install chromium`.
