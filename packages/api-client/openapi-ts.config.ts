@@ -1,0 +1,22 @@
+import { defineConfig } from '@hey-api/openapi-ts';
+import { applySpecPatches } from './openapi/patches';
+
+const OPERATIONS = [
+  'GET /v1/players/{account_id}/match-history',
+  'GET /v1/assets/heroes',
+];
+
+export default defineConfig({
+  input: './openapi/spec.json',
+  output: './src/generated',
+  parser: {
+    filters: { operations: { include: OPERATIONS } },
+    patch: { input: applySpecPatches },
+  },
+  plugins: [
+    '@hey-api/client-fetch',
+    '@hey-api/typescript',
+    { name: 'zod', definitions: { types: { infer: true } } },
+    { name: '@hey-api/sdk', validator: true },
+  ],
+});
