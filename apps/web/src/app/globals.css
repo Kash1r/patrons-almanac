@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@import "../styles/tokens.gen.css";
+
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="parchment"] {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+}
+
+@utility button-brass {
+  display: inline-block;
+  background: var(--color-brass);
+  color: var(--color-on-brass);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2) var(--spacing-4);
+}
+
+@utility corner-step-* {
+  --step: --value(--corner-step-*);
+  clip-path: polygon(
+    0 var(--step), var(--step) var(--step), var(--step) 0,
+    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
+    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
+    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
+  );
+}

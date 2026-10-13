@@ -1,0 +1,140 @@
+/* Generated from docs/design/tokens.json by scripts/gen-tokens.ts. Do not edit; run `pnpm gen`. */
+
+@theme {
+  --color-*: initial;
+  --color-ground: #0e0c10;
+  --color-surface: #1a1420;
+  --color-surface-raised: #251c2c;
+  --color-hairline: #3a2e3f;
+  --color-text: #ede4d3;
+  --color-text-muted: #a39a8c;
+  --color-gilt: #e8cf8a;
+  --color-brass: #c9a45c;
+  --color-on-brass: #1a1420;
+  --color-team-amber: #e0a34a;
+  --color-team-sapphire: #7a9be6;
+  --color-win: #4fb3a6;
+  --color-loss: #e07a5f;
+
+  --font-*: initial;
+  --font-display: var(--font-face-display), "Futura", "Century Gothic", sans-serif;
+  --font-serif: var(--font-face-serif), "Garamond", Georgia, serif;
+  --font-mono: var(--font-face-mono), ui-monospace, "SFMono-Regular", monospace;
+  --default-font-family: var(--font-serif);
+  --default-mono-font-family: var(--font-mono);
+
+  --text-*: initial;
+
+  --spacing-*: initial;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+
+  --radius-*: initial;
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-full: 9999px;
+
+  --corner-step-sm: 8px;
+  --corner-step-lg: 16px;
+}
+
+[data-theme="parchment"] {
+  --color-ground: #f4ede0;
+  --color-surface: #fbf7ef;
+  --color-surface-raised: #fffdf8;
+  --color-hairline: #dccfb8;
+  --color-text: #241c2b;
+  --color-text-muted: #665c4f;
+  --color-gilt: #6b4f1d;
+  --color-brass: #8a6a2b;
+  --color-on-brass: #fbf7ef;
+  --color-team-amber: #9a5b14;
+  --color-team-sapphire: #2f5db3;
+  --color-win: #1d7067;
+  --color-loss: #b0452b;
+}
+
+@utility type-display-xl {
+  font-family: var(--font-display);
+  font-size: 64px;
+  line-height: 68px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+@utility type-display-l {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+@utility type-h1 {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  line-height: 38px;
+  font-weight: 600;
+}
+
+@utility type-h2 {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 600;
+}
+
+@utility type-h3 {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+}
+
+@utility type-body {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+@utility type-body-small {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+}
+
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+@utility type-stat-xl {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  line-height: 40px;
+  font-weight: 500;
+}
+
+@utility type-stat {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+@utility type-table {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
