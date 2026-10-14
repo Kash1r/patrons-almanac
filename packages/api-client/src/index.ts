@@ -18,4 +18,6 @@ export type {
   UnixSeconds,
 } from './domain';
 export { parseMatchId } from './match';
+export { parseRegion, REGIONS } from './leaderboard';
+export type { LeaderboardRow, Region } from './leaderboard';
 export type { CurvePoint, ItemPurchase, ItemSummary, MatchDetail, MatchPlayer } from './match';

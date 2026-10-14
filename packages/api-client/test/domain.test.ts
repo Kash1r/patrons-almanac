@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerMatchHistoryEntry } from '../src/generated/types.gen';
+import { parseRegion } from '../src/leaderboard';
 import { parseMatchId } from '../src/match';
 import {
   type HeroId,
@@ -150,5 +151,11 @@ describe('search queries', () => {
     ['01', null],
   ])('reads %j as account %j', (input, expected) => {
     expect(accountIdFromQuery(parseSearchQuery(input) as SearchQuery)).toBe(expected);
+  });
+});
+
+describe('parseRegion', () => {
+  it.each([['Europe', 'Europe'], ['NAmerica', 'NAmerica'], ['europe', null], ['Mars', null], ['', null]])('%j -> %j', (input, expected) => {
+    expect(parseRegion(input)).toBe(expected);
   });
 });

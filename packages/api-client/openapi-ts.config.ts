@@ -10,6 +10,7 @@ const OPERATIONS = [
   'GET /v1/matches/{match_id}/metadata',
   'GET /v1/assets/items/by-type/{type}',
   'GET /v1/players/steam-search',
+  'GET /v1/leaderboard/{region}',
 ];
 
 export default defineConfig({

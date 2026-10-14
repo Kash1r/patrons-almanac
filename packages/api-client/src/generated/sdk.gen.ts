@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetItemsByTypeData, GetItemsByTypeResponses, ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, MetadataData, MetadataErrors, MetadataResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses, SteamSearchData, SteamSearchErrors, SteamSearchResponses } from './types.gen';
-import { zGetItemsByTypePath, zGetItemsByTypeQuery, zGetItemsByTypeResponse, zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zMetadataPath, zMetadataQuery, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse, zSteamSearchQuery, zSteamSearchResponse } from './zod.gen';
+import type { GetItemsByTypeData, GetItemsByTypeResponses, LeaderboardData, LeaderboardErrors, LeaderboardResponses, ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, MetadataData, MetadataErrors, MetadataResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses, SteamSearchData, SteamSearchErrors, SteamSearchResponses } from './types.gen';
+import { zGetItemsByTypePath, zGetItemsByTypeQuery, zGetItemsByTypeResponse, zLeaderboardPath, zLeaderboardQuery, zLeaderboardResponse, zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zMetadataPath, zMetadataQuery, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse, zSteamSearchQuery, zSteamSearchResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -64,6 +64,35 @@ export const listRanks = <ThrowOnError extends boolean = false>(options?: Option
     }).parseAsync(data),
     responseValidator: async (data) => await zListRanksResponse.parseAsync(data),
     url: '/v1/assets/ranks',
+    ...options
+});
+
+/**
+ * Leaderboard
+ *
+ *
+ * Returns the leaderboard.
+ *
+ * ### Note:
+ *
+ * Valve updates the leaderboard once per hour.
+ *
+ * ### Rate Limits:
+ * | Type | Limit |
+ * | ---- | ----- |
+ * | IP | 100req/s |
+ * | Key | - |
+ * | Global | - |
+ *
+ */
+export const leaderboard = <ThrowOnError extends boolean = false>(options: Options<LeaderboardData, ThrowOnError>): RequestResult<LeaderboardResponses, LeaderboardErrors, ThrowOnError> => (options.client ?? client).get<LeaderboardResponses, LeaderboardErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zLeaderboardPath,
+        query: zLeaderboardQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zLeaderboardResponse.parseAsync(data),
+    url: '/v1/leaderboard/{region}',
     ...options
 });
 

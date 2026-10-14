@@ -46,7 +46,7 @@ export function TopHeroes({ matches }: { matches: readonly PlayerMatch[] }) {
       ) : (
         <>
           <p className="mt-1 type-body-small text-text-muted">Most played, over the same matches</p>
-          <div className="-mx-4 mt-4 overflow-x-auto md:mx-0">
+          <div className="relative -mx-4 mt-4 overflow-x-auto md:mx-0">
             <table className="w-full whitespace-nowrap">
               <thead>
                 <tr className="text-text-muted">

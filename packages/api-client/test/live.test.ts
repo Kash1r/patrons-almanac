@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createAlmanac, noCache } from '../src/almanac';
 import { type AccountId, type MatchId, type SearchQuery, parseAccountId, parseSearchQuery } from '../src/domain';
+import { REGIONS } from '../src/leaderboard';
 import { parseMatchId } from '../src/match';
 
 describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => {
@@ -38,6 +39,17 @@ describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => 
     const result = await almanac.searchPlayers(parseSearchQuery('Kashir') as SearchQuery);
     expect(result.ok && result.value.map((h) => h.accountId)).toContain(256939921);
   }, 30_000);
+
+  it('reads every region leaderboard in standing order', async () => {
+    const almanac = createAlmanac({ cache: noCache, cacheNamespace: 'live' });
+    for (const region of REGIONS) {
+      const result = await almanac.leaderboard(region);
+      if (!result.ok) throw new Error(`${region}: ${JSON.stringify(result.error)}`);
+      expect(result.value.length).toBeGreaterThan(100);
+      expect(result.value[0]!.position).toBe(1);
+      expect(result.value.every((r, i, rows) => i === 0 || r.position >= rows[i - 1]!.position)).toBe(true);
+    }
+  }, 60_000);
 
   it('answers an unknown account with an empty history', async () => {
     const almanac = createAlmanac({ cache: noCache, cacheNamespace: 'live' });

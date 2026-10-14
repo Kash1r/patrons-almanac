@@ -13,10 +13,15 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="en" data-theme="dusk" className={fontVariables}>
       <body className="flex min-h-dvh flex-col">
         <header className="border-b border-hairline">
-          <div className="mx-auto max-w-5xl px-4 py-4 md:px-6">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-baseline justify-between gap-x-6 gap-y-2 px-4 py-4 md:px-6">
             <Link href="/" className="type-display-l text-gilt">
               Patron&apos;s Almanac
             </Link>
+            <nav aria-label="Main">
+              <Link href="/leaderboard" className="type-body hover:text-gilt">
+                Leaderboard
+              </Link>
+            </nav>
           </div>
         </header>
         <div className="flex-1">{children}</div>

@@ -259,6 +259,21 @@ export const zLastRankedMatch = z.object({
 
 export type lastRankedMatchZodType = z.infer<typeof zLastRankedMatch>;
 
+export const zLeaderboardEntry = z.object({
+    account_name: z.string().nullish(),
+    possible_account_ids: z.array(z.int().gte(0)).optional(),
+    rank: z.int().gte(0).nullish(),
+    top_hero_ids: z.array(z.int().gte(0)).optional()
+});
+
+export type leaderboardEntryZodType = z.infer<typeof zLeaderboardEntry>;
+
+export const zLeaderboard = z.object({
+    entries: z.array(zLeaderboardEntry)
+});
+
+export type leaderboardZodType = z.infer<typeof zLeaderboard>;
+
 export const zPlayerMatchHistoryEntry = z.object({
     abandoned_time_s: z.int().gte(0).nullish(),
     account_id: z.int().gte(0),
@@ -1013,6 +1028,25 @@ export const zListRanksQuery = z.object({
  * OK
  */
 export const zListRanksResponse = z.array(zRank);
+
+export const zLeaderboardPath = z.object({
+    region: z.enum([
+        'Europe',
+        'Asia',
+        'NAmerica',
+        'SAmerica',
+        'Oceania'
+    ])
+});
+
+export const zLeaderboardQuery = z.object({
+    leaderboard_id: z.int().gte(0).optional()
+});
+
+/**
+ * OK
+ */
+export const zLeaderboardResponse = zLeaderboard;
 
 export const zMetadataPath = z.object({
     match_id: z.int().gte(0)

@@ -109,7 +109,7 @@ function HistoryCard({ busy = false, children }: { busy?: boolean; children: Rea
 
 function MatchTable({ children }: { children: ReactNode }) {
   return (
-    <div className="-mx-4 mt-4 overflow-x-auto md:mx-0">
+    <div className="relative -mx-4 mt-4 overflow-x-auto md:mx-0">
       <table className="w-full whitespace-nowrap">
         <thead>
           <tr className="text-text-muted">
