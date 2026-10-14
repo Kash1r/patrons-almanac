@@ -90,7 +90,9 @@ Every stat shows its sample size; win rates under 50 matches are shown muted wit
 5. **Phase 4, week 10: Launch.** Performance and accessibility pass, README with
    screenshots and live link, portfolio write-up.
 
-Current phase: **Phase 0**.
+Phase 0 is done (2026-10-13). Live site: https://patrons-almanac.vercel.app/player/256939921
+
+Current phase: **Phase 1**.
 
 ## Working style
 
