@@ -1,15 +1,21 @@
 import { type Client, createClient } from './generated/client';
-import { listHeroes, matchHistory as getMatchHistory } from './generated/sdk.gen';
-import type { PlayerMatchHistoryEntry } from './generated/types.gen';
+import { listHeroes, listRanks, matchHistory as getMatchHistory, rank as getRank, steam } from './generated/sdk.gen';
+import type { PlayerMatchHistoryEntry, RankResponse } from './generated/types.gen';
 import { zMatchHistoryResponse } from './generated/zod.gen';
 import {
   type AccountId,
   type HeroIndex,
   type PlayerMatch,
   type PlayerMatchRecord,
+  type PlayerRank,
+  type RankIndex,
+  type SteamPersona,
   joinHeroes,
   parseHistory,
+  resolveRank,
   toHeroIndex,
+  toRankIndex,
+  toSteamPersona,
 } from './domain';
 
 export type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
@@ -58,13 +64,23 @@ export interface Almanac {
    * A failed hero index degrades heroes to `{ kind: 'unknown' }`; it never fails the history.
    */
   matchHistory(accountId: AccountId): Promise<Result<readonly PlayerMatch[]>>;
+  /**
+   * The rank after the account's latest ranked match. A failed rank index degrades the tier name
+   * and badge to `null`; it never fails the rank.
+   */
+  playerRank(accountId: AccountId): Promise<Result<PlayerRank>>;
+  /** The Steam persona, or `null` when the API holds no Steam profile for the account. */
+  steamPersona(accountId: AccountId): Promise<Result<SteamPersona | null>>;
 }
 
-type SourceName = 'hero-index' | 'match-history';
+type SourceName = 'hero-index' | 'match-history' | 'rank-index' | 'player-rank' | 'steam-persona';
 
 const SOURCES = {
   'hero-index': { ttlSeconds: 24 * 60 * 60 },
   'match-history': { ttlSeconds: 5 * 60 },
+  'rank-index': { ttlSeconds: 24 * 60 * 60 },
+  'player-rank': { ttlSeconds: 5 * 60 },
+  'steam-persona': { ttlSeconds: 15 * 60 },
 } as const satisfies Record<SourceName, CachePolicy>;
 
 const BASE_URL = 'https://api.deadlock-api.com';
@@ -88,6 +104,19 @@ export function createAlmanac(options: AlmanacOptions): Almanac {
       ]);
       if (!history.ok) return history;
       return { ok: true, value: joinHeroes(history.value, heroes.ok ? heroes.value : {}) };
+    },
+
+    async playerRank(accountId) {
+      const [rank, ranks] = await Promise.all([
+        readThrough(options, 'player-rank', [accountId], () => loadRank(client, accountId)),
+        readThrough(options, 'rank-index', [], () => loadRankIndex(client)),
+      ]);
+      if (!rank.ok) return rank;
+      return { ok: true, value: resolveRank(ranks.ok ? ranks.value : {}, rank.value) };
+    },
+
+    steamPersona(accountId) {
+      return readThrough(options, 'steam-persona', [accountId], () => loadSteamPersona(client, accountId));
     },
   };
 }
@@ -135,6 +164,22 @@ function storedHistoryOr429(body: unknown): readonly PlayerMatchHistoryEntry[] {
 
 async function loadHeroIndex(client: Client): Promise<HeroIndex> {
   return toHeroIndex(unwrap('hero-index', await listHeroes({ client, signal: AbortSignal.timeout(TIMEOUT_MS) })));
+}
+
+/** Stores the raw response: it is four small integers and one optional object. */
+async function loadRank(client: Client, accountId: AccountId): Promise<RankResponse> {
+  return unwrap('player-rank', await getRank({ client, path: { account_id: accountId }, signal: AbortSignal.timeout(TIMEOUT_MS) }));
+}
+
+async function loadRankIndex(client: Client): Promise<RankIndex> {
+  return toRankIndex(unwrap('rank-index', await listRanks({ client, signal: AbortSignal.timeout(TIMEOUT_MS) })));
+}
+
+/** The API answers 404 when it holds no Steam profile for the account. */
+async function loadSteamPersona(client: Client, accountId: AccountId): Promise<SteamPersona | null> {
+  const outcome = await steam({ client, query: { account_ids: [accountId] }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (outcome.response?.status === 404) return null;
+  return toSteamPersona(unwrap('steam-persona', outcome));
 }
 
 type SdkOutcome<T> = { readonly data: T | undefined; readonly error: unknown; readonly response?: Response };

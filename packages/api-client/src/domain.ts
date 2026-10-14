@@ -1,4 +1,4 @@
-import type { Hero, PlayerMatchHistoryEntry } from './generated/types.gen';
+import type { Hero, PlayerMatchHistoryEntry, Rank, RankResponse, SteamProfile } from './generated/types.gen';
 
 declare const brand: unique symbol;
 type Brand<T, Name extends string> = T & { readonly [brand]: Name };
@@ -41,6 +41,31 @@ export type PlayerMatchRecord = {
 export type PlayerMatch = Omit<PlayerMatchRecord, 'heroId'> & { readonly hero: HeroRef };
 
 export type HeroSource = Pick<Hero, 'id' | 'name' | 'images'>;
+
+export type RankTier = {
+  readonly name: string;
+  /** Badge art by subrank, `'1'` to `'6'`. Obscurus has none. */
+  readonly badgeUrls: { readonly [subrank: string]: string };
+};
+
+export type RankIndex = { readonly [tier: string]: RankTier };
+
+export type RankSource = Pick<Rank, 'tier' | 'name' | 'images'>;
+
+export type PlayerRank =
+  | { readonly kind: 'unranked' }
+  | {
+      readonly kind: 'ranked';
+      readonly tier: number;
+      readonly subrank: number;
+      /** `null` when the rank index failed or lacks the tier. */
+      readonly name: string | null;
+      readonly badgeUrl: string | null;
+      /** Start of the ranked match the rank was read from. */
+      readonly asOf: UnixSeconds | null;
+    };
+
+export type SteamPersona = { readonly name: string };
 
 export type ParsedHistory = {
   readonly matches: readonly PlayerMatchRecord[];
@@ -107,6 +132,40 @@ export function resolveHero(index: HeroIndex, id: HeroId): HeroRef {
 
 export function joinHeroes(records: readonly PlayerMatchRecord[], index: HeroIndex): PlayerMatch[] {
   return records.map(({ heroId, ...rest }) => ({ ...rest, hero: resolveHero(index, heroId) }));
+}
+
+const SUBRANKS = ['1', '2', '3', '4', '5', '6'] as const;
+
+export function toRankIndex(ranks: readonly RankSource[]): RankIndex {
+  const index: { [tier: string]: RankTier } = {};
+  for (const rank of ranks) {
+    const badgeUrls: { [subrank: string]: string } = {};
+    for (const sub of SUBRANKS) {
+      const url = rank.images[`small_subrank${sub}_webp`] ?? rank.images[`small_subrank${sub}`];
+      if (url !== null && url !== undefined) badgeUrls[sub] = url;
+    }
+    index[String(rank.tier)] = { name: rank.name, badgeUrls };
+  }
+  return index;
+}
+
+/** Tier 0 is Obscurus, which the API also reports while the player has no ranked result. */
+export function resolveRank(index: RankIndex, response: RankResponse): PlayerRank {
+  if (response.rank === 0) return { kind: 'unranked' };
+  const tier = index[String(response.rank)];
+  return {
+    kind: 'ranked',
+    tier: response.rank,
+    subrank: response.subrank,
+    name: tier?.name ?? null,
+    badgeUrl: tier?.badgeUrls[String(response.subrank)] ?? null,
+    asOf: response.last_match === null || response.last_match === undefined ? null : mintUnixSeconds(response.last_match.start_time),
+  };
+}
+
+export function toSteamPersona(profiles: readonly Pick<SteamProfile, 'personaname'>[]): SteamPersona | null {
+  const profile = profiles[0];
+  return profile === undefined ? null : { name: profile.personaname };
 }
 
 /** Accepts canonical decimal SteamID3 only: no sign, no leading zero, 1 to 2^32-1. */

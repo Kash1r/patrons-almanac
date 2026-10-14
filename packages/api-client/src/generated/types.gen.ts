@@ -220,6 +220,46 @@ export type HeroStatsUiDisplay = {
 
 export type HeroType = 'assassin' | 'brawler' | 'marksman' | 'mystic';
 
+export type LastRankedMatch = {
+    match_id: number;
+    /**
+     * Whether the match used up one of the player's demotion protection games.
+     */
+    player_rank_consumed_demotion_protection?: boolean | null;
+    /**
+     * Progress change the match was supposed to award, before demotion protection is applied.
+     */
+    player_rank_desired_progress_change?: number | null;
+    /**
+     * Rank progress the player ended the match with.
+     */
+    player_rank_final_flat_progress?: number | null;
+    /**
+     * Remaining placement games at the start of the match.
+     */
+    player_rank_initial_calibration_games?: number | null;
+    /**
+     * Remaining demotion protection games at the start of the match.
+     */
+    player_rank_initial_demotion_protection_games?: number | null;
+    /**
+     * Rank badge the player entered the match with, `tier * 10 + subrank`.
+     */
+    player_rank_initial_display_rank: number;
+    /**
+     * Rank progress the player entered the match with.
+     */
+    player_rank_initial_flat_progress?: number | null;
+    /**
+     * Win streak the player entered the match with.
+     */
+    player_rank_initial_win_streak?: number | null;
+    /**
+     * Match start time as a unix timestamp.
+     */
+    start_time: number;
+};
+
 export type PlayerMatchHistoryEntry = {
     abandoned_time_s?: number | null;
     account_id: number;
@@ -267,6 +307,163 @@ export type PlayerMatchHistoryEntry = {
     ranked_used_demotion_protection?: boolean | null;
     start_time: number;
     team_abandoned?: boolean | null;
+};
+
+export type Rank = {
+    color: string;
+    images: RankImages;
+    name: string;
+    tier: number;
+};
+
+/**
+ * Image URLs for a single rank tier. Field declaration order is load-bearing:
+ * it sets the JSON key order, which is stable across versions of this API.
+ */
+export type RankImages = {
+    chalk?: string | null;
+    chalk_webp?: string | null;
+    large?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank1?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank1_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank2?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank2_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank3?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank3_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank4?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank4_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank5?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank5_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank6?: string | null;
+    /**
+     * @deprecated
+     */
+    large_subrank6_webp?: string | null;
+    large_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank1?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank1_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank2?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank2_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank3?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank3_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank4?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank4_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank5?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank5_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank6?: string | null;
+    /**
+     * @deprecated
+     */
+    small_subrank6_webp?: string | null;
+    /**
+     * @deprecated
+     */
+    small_webp?: string | null;
+    /**
+     * Tier badge with the division numeral drawn on it, composed on demand by this API.
+     */
+    subrank1?: string | null;
+    subrank1_webp?: string | null;
+    subrank2?: string | null;
+    subrank2_webp?: string | null;
+    subrank3?: string | null;
+    subrank3_webp?: string | null;
+    subrank4?: string | null;
+    subrank4_webp?: string | null;
+    subrank5?: string | null;
+    subrank5_webp?: string | null;
+    subrank6?: string | null;
+    subrank6_webp?: string | null;
+};
+
+export type RankResponse = {
+    /**
+     * Rank badge, `tier * 10 + subrank`, including the progress the last ranked match awarded.
+     * Eternus subranks are percentile-based and refreshed daily by Valve, so within Eternus this
+     * is the badge the player entered their latest ranked match with.
+     * `0` when no recent ranked match reports a rank.
+     * See more: <https://api.deadlock-api.com/v1/assets/ranks>
+     */
+    badge: number;
+    last_match?: LastRankedMatch | null;
+    /**
+     * Rank tier, `0` when unknown.
+     */
+    rank: number;
+    /**
+     * Sub-rank within the tier, `0` when unknown.
+     */
+    subrank: number;
 };
 
 export type ShopSpiritStatsDisplay = {
@@ -335,6 +532,26 @@ export type StatsDisplay = {
     weapon_stats: Array<string>;
 };
 
+export type SteamFriend = {
+    account_id: number;
+    friend_since: string;
+};
+
+export type SteamProfile = {
+    account_id: number;
+    avatar: string;
+    avatarfull: string;
+    avatarmedium: string;
+    countrycode?: string | null;
+    friends: Array<SteamFriend>;
+    last_team_avg_badge?: number | null;
+    last_updated: string;
+    matches_played_last_30d: number;
+    personaname: string;
+    profileurl: string;
+    realname?: string | null;
+};
+
 export type ListHeroesData = {
     body?: never;
     path?: never;
@@ -374,6 +591,90 @@ export type ListHeroesResponses = {
 };
 
 export type ListHeroesResponse = ListHeroesResponses[keyof ListHeroesResponses];
+
+export type ListRanksData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Language code. Defaults to `english`.
+         */
+        language?: 'brazilian' | 'bulgarian' | 'czech' | 'danish' | 'dutch' | 'english' | 'finnish' | 'french' | 'german' | 'greek' | 'hungarian' | 'indonesian' | 'italian' | 'japanese' | 'koreana' | 'latam' | 'norwegian' | 'polish' | 'portuguese' | 'romanian' | 'russian' | 'schinese' | 'spanish' | 'swedish' | 'tchinese' | 'thai' | 'turkish' | 'ukrainian' | 'vietnamese' | null;
+        /**
+         * Client/game version (e.g. `6518`). Defaults to the latest known version.
+         */
+        client_version?: number | null;
+    };
+    url: '/v1/assets/ranks';
+};
+
+export type ListRanksErrors = {
+    /**
+     * Requested client_version is not available
+     */
+    404: unknown;
+    /**
+     * Failed to load source assets
+     */
+    500: unknown;
+};
+
+export type ListRanksResponses = {
+    /**
+     * OK
+     */
+    200: Array<Rank>;
+};
+
+export type ListRanksResponse = ListRanksResponses[keyof ListRanksResponses];
+
+export type SteamData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Comma separated list of account ids, Account IDs are in `SteamID3` format.
+         */
+        account_ids: Array<number>;
+        /**
+         * Refresh the listed profiles from the Steam Web API before returning.
+         */
+        refresh?: boolean;
+    };
+    url: '/v1/players/steam';
+};
+
+export type SteamErrors = {
+    /**
+     * Provided parameters are invalid.
+     */
+    400: unknown;
+    /**
+     * No Steam profile found.
+     */
+    404: unknown;
+    /**
+     * Rate limit exceeded (only enforced when refresh=true).
+     */
+    429: unknown;
+    /**
+     * Failed to fetch steam profiles.
+     */
+    500: unknown;
+    /**
+     * Steam Web API call failed (only when refresh=true).
+     */
+    502: unknown;
+};
+
+export type SteamResponses = {
+    /**
+     * Steam Profiles
+     */
+    200: Array<SteamProfile>;
+};
+
+export type SteamResponse = SteamResponses[keyof SteamResponses];
 
 export type MatchHistoryData = {
     body?: never;
@@ -419,3 +720,39 @@ export type MatchHistoryResponses = {
 };
 
 export type MatchHistoryResponse = MatchHistoryResponses[keyof MatchHistoryResponses];
+
+export type RankData = {
+    body?: never;
+    path: {
+        /**
+         * The players `SteamID3`
+         */
+        account_id: number;
+    };
+    query?: never;
+    url: '/v1/players/{account_id}/rank';
+};
+
+export type RankErrors = {
+    /**
+     * Invalid account ID
+     */
+    400: unknown;
+    /**
+     * User is protected or endpoint unavailable
+     */
+    403: unknown;
+    /**
+     * Rank lookup failed
+     */
+    500: unknown;
+};
+
+export type RankResponses = {
+    /**
+     * OK
+     */
+    200: RankResponse;
+};
+
+export type RankResponse2 = RankResponses[keyof RankResponses];

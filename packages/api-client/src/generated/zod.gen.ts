@@ -159,6 +159,21 @@ export const zHeroType = z.enum([
 
 export type heroTypeZodType = z.infer<typeof zHeroType>;
 
+export const zLastRankedMatch = z.object({
+    match_id: z.int().gte(0),
+    player_rank_consumed_demotion_protection: z.boolean().nullish(),
+    player_rank_desired_progress_change: z.int().nullish(),
+    player_rank_final_flat_progress: z.int().gte(0).nullish(),
+    player_rank_initial_calibration_games: z.int().gte(0).nullish(),
+    player_rank_initial_demotion_protection_games: z.int().gte(0).nullish(),
+    player_rank_initial_display_rank: z.int().gte(0),
+    player_rank_initial_flat_progress: z.int().gte(0).nullish(),
+    player_rank_initial_win_streak: z.int().gte(0).nullish(),
+    start_time: z.int().gte(0)
+});
+
+export type lastRankedMatchZodType = z.infer<typeof zLastRankedMatch>;
+
 export const zPlayerMatchHistoryEntry = z.object({
     abandoned_time_s: z.int().gte(0).nullish(),
     account_id: z.int().gte(0),
@@ -191,6 +206,75 @@ export const zPlayerMatchHistoryEntry = z.object({
 });
 
 export type playerMatchHistoryEntryZodType = z.infer<typeof zPlayerMatchHistoryEntry>;
+
+/**
+ * Image URLs for a single rank tier. Field declaration order is load-bearing:
+ * it sets the JSON key order, which is stable across versions of this API.
+ */
+export const zRankImages = z.object({
+    chalk: z.string().nullish(),
+    chalk_webp: z.string().nullish(),
+    large: z.string().nullish(),
+    large_subrank1: z.string().nullish(),
+    large_subrank1_webp: z.string().nullish(),
+    large_subrank2: z.string().nullish(),
+    large_subrank2_webp: z.string().nullish(),
+    large_subrank3: z.string().nullish(),
+    large_subrank3_webp: z.string().nullish(),
+    large_subrank4: z.string().nullish(),
+    large_subrank4_webp: z.string().nullish(),
+    large_subrank5: z.string().nullish(),
+    large_subrank5_webp: z.string().nullish(),
+    large_subrank6: z.string().nullish(),
+    large_subrank6_webp: z.string().nullish(),
+    large_webp: z.string().nullish(),
+    small: z.string().nullish(),
+    small_subrank1: z.string().nullish(),
+    small_subrank1_webp: z.string().nullish(),
+    small_subrank2: z.string().nullish(),
+    small_subrank2_webp: z.string().nullish(),
+    small_subrank3: z.string().nullish(),
+    small_subrank3_webp: z.string().nullish(),
+    small_subrank4: z.string().nullish(),
+    small_subrank4_webp: z.string().nullish(),
+    small_subrank5: z.string().nullish(),
+    small_subrank5_webp: z.string().nullish(),
+    small_subrank6: z.string().nullish(),
+    small_subrank6_webp: z.string().nullish(),
+    small_webp: z.string().nullish(),
+    subrank1: z.string().nullish(),
+    subrank1_webp: z.string().nullish(),
+    subrank2: z.string().nullish(),
+    subrank2_webp: z.string().nullish(),
+    subrank3: z.string().nullish(),
+    subrank3_webp: z.string().nullish(),
+    subrank4: z.string().nullish(),
+    subrank4_webp: z.string().nullish(),
+    subrank5: z.string().nullish(),
+    subrank5_webp: z.string().nullish(),
+    subrank6: z.string().nullish(),
+    subrank6_webp: z.string().nullish()
+});
+
+export type rankImagesZodType = z.infer<typeof zRankImages>;
+
+export const zRank = z.object({
+    color: z.string(),
+    images: zRankImages,
+    name: z.string(),
+    tier: z.int().gte(0)
+});
+
+export type rankZodType = z.infer<typeof zRank>;
+
+export const zRankResponse = z.object({
+    badge: z.int().gte(0),
+    last_match: zLastRankedMatch.nullish(),
+    rank: z.int().gte(0),
+    subrank: z.int().gte(0)
+});
+
+export type rankResponseZodType = z.infer<typeof zRankResponse>;
 
 export const zShopSpiritStatsDisplay = z.object({
     display_stats: z.array(z.string())
@@ -315,6 +399,30 @@ export const zHero = z.object({
 
 export type heroZodType = z.infer<typeof zHero>;
 
+export const zSteamFriend = z.object({
+    account_id: z.int().gte(0),
+    friend_since: z.iso.datetime()
+});
+
+export type steamFriendZodType = z.infer<typeof zSteamFriend>;
+
+export const zSteamProfile = z.object({
+    account_id: z.int().gte(0),
+    avatar: z.string(),
+    avatarfull: z.string(),
+    avatarmedium: z.string(),
+    countrycode: z.string().nullish(),
+    friends: z.array(zSteamFriend),
+    last_team_avg_badge: z.int().gte(0).nullish(),
+    last_updated: z.iso.datetime(),
+    matches_played_last_30d: z.int().gte(0),
+    personaname: z.string(),
+    profileurl: z.string(),
+    realname: z.string().nullish()
+});
+
+export type steamProfileZodType = z.infer<typeof zSteamProfile>;
+
 export const zListHeroesQuery = z.object({
     language: z.union([
         z.literal('brazilian'),
@@ -356,6 +464,56 @@ export const zListHeroesQuery = z.object({
  */
 export const zListHeroesResponse = z.array(zHero);
 
+export const zListRanksQuery = z.object({
+    language: z.union([
+        z.literal('brazilian'),
+        z.literal('bulgarian'),
+        z.literal('czech'),
+        z.literal('danish'),
+        z.literal('dutch'),
+        z.literal('english'),
+        z.literal('finnish'),
+        z.literal('french'),
+        z.literal('german'),
+        z.literal('greek'),
+        z.literal('hungarian'),
+        z.literal('indonesian'),
+        z.literal('italian'),
+        z.literal('japanese'),
+        z.literal('koreana'),
+        z.literal('latam'),
+        z.literal('norwegian'),
+        z.literal('polish'),
+        z.literal('portuguese'),
+        z.literal('romanian'),
+        z.literal('russian'),
+        z.literal('schinese'),
+        z.literal('spanish'),
+        z.literal('swedish'),
+        z.literal('tchinese'),
+        z.literal('thai'),
+        z.literal('turkish'),
+        z.literal('ukrainian'),
+        z.literal('vietnamese')
+    ]).nullish(),
+    client_version: z.int().gte(0).nullish()
+});
+
+/**
+ * OK
+ */
+export const zListRanksResponse = z.array(zRank);
+
+export const zSteamQuery = z.object({
+    account_ids: z.array(z.int().gte(0)).min(1).max(1000),
+    refresh: z.boolean().optional()
+});
+
+/**
+ * Steam Profiles
+ */
+export const zSteamResponse = z.array(zSteamProfile);
+
 export const zMatchHistoryPath = z.object({
     account_id: z.int().gte(0)
 });
@@ -368,3 +526,12 @@ export const zMatchHistoryQuery = z.object({
  * OK
  */
 export const zMatchHistoryResponse = z.array(zPlayerMatchHistoryEntry);
+
+export const zRankPath = z.object({
+    account_id: z.int().gte(0)
+});
+
+/**
+ * OK
+ */
+export const zRankResponse2 = zRankResponse;

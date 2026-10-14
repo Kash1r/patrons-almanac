@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ListHeroesData, ListHeroesErrors, ListHeroesResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses } from './types.gen';
-import { zListHeroesQuery, zListHeroesResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse } from './zod.gen';
+import type { ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses } from './types.gen';
+import { zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -34,6 +34,56 @@ export const listHeroes = <ThrowOnError extends boolean = false>(options?: Optio
     }).parseAsync(data),
     responseValidator: async (data) => await zListHeroesResponse.parseAsync(data),
     url: '/v1/assets/heroes',
+    ...options
+});
+
+/**
+ * List Ranks
+ *
+ * Returns the 12 player ranks (tier, localized name, badge image URLs, hex color).
+ */
+export const listRanks = <ThrowOnError extends boolean = false>(options?: Options<ListRanksData, ThrowOnError>): RequestResult<ListRanksResponses, ListRanksErrors, ThrowOnError> => (options?.client ?? client).get<ListRanksResponses, ListRanksErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListRanksQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListRanksResponse.parseAsync(data),
+    url: '/v1/assets/ranks',
+    ...options
+});
+
+/**
+ * Batch Steam Profile
+ *
+ *
+ * This endpoint returns Steam profiles of players.
+ *
+ * Pass `refresh=true` to force a live refresh of the listed accounts from the
+ * Steam Web API (`GetPlayerSummaries` + `GetFriendList`) before returning. The
+ * refreshed rows are persisted to the `steam_profiles` table and returned in the
+ * response with `last_updated` set to the current time. Refresh requests are
+ * rate limited and capped at 100 account ids per call to stay inside the
+ * shared Steam Web API key budget.
+ *
+ * See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
+ *
+ * ### Rate Limits:
+ * | Type | Limit |
+ * | ---- | ----- |
+ * | IP | 100req/s (read path), 3req/min + 15req/h (refresh) |
+ * | Key | - (read path), 10req/min + 60req/h (refresh) |
+ * | Global | - (read path), 30req/min + 200req/h (refresh) |
+ *
+ */
+export const steam = <ThrowOnError extends boolean = false>(options: Options<SteamData, ThrowOnError>): RequestResult<SteamResponses, SteamErrors, ThrowOnError> => (options.client ?? client).get<SteamResponses, SteamErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zSteamQuery
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSteamResponse.parseAsync(data),
+    url: '/v1/players/steam',
     ...options
 });
 
@@ -68,5 +118,33 @@ export const matchHistory = <ThrowOnError extends boolean = false>(options: Opti
     }).parseAsync(data),
     responseValidator: async (data) => await zMatchHistoryResponse.parseAsync(data),
     url: '/v1/players/{account_id}/match-history',
+    ...options
+});
+
+/**
+ * Rank
+ *
+ *
+ * Returns the player's rank at the end of their latest ranked match, i.e. the rank they entered that
+ * match with plus the progress the match awarded. A subrank spans 1000 progress points, so a single
+ * match can move the badge. Eternus subranks are instead percentile cuts Valve recomputes daily, so
+ * within Eternus the badge is the one the player entered the match with.
+ *
+ * Only ranked matches carry a rank, and it stays unset while the player is in placement games.
+ * When none of the player's recent ranked matches reports a rank, `badge`, `rank` and `subrank` are
+ * all `0`, which is the `Obscurus` (unranked) tier, and `last_match` is `null`.
+ *
+ * `last_match` carries the rank metadata Valve reported on that match, e.g. rank progress, remaining
+ * placement games and demotion protection.
+ *
+ */
+export const rank = <ThrowOnError extends boolean = false>(options: Options<RankData, ThrowOnError>): RequestResult<RankResponses, RankErrors, ThrowOnError> => (options.client ?? client).get<RankResponses, RankErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRankPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRankResponse2.parseAsync(data),
+    url: '/v1/players/{account_id}/rank',
     ...options
 });

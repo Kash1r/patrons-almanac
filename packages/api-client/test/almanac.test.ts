@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import heroes from './fixtures/heroes.json';
 import history from './fixtures/match-history.json';
+import rank from './fixtures/rank.json';
+import ranks from './fixtures/ranks.json';
+import steamProfiles from './fixtures/steam.json';
 import { type CacheStore, createAlmanac, noCache } from '../src/almanac';
 import { type AccountId, parseAccountId } from '../src/domain';
 
@@ -11,13 +14,19 @@ type Reply = { status: number; body: unknown } | 'network-error';
 const ROUTES = {
   '/v1/players/256939921/match-history': 'history',
   '/v1/assets/heroes': 'heroes',
+  '/v1/players/256939921/rank': 'rank',
+  '/v1/assets/ranks': 'ranks',
+  '/v1/players/steam': 'steam',
 } as const;
 
-function upstream(replies: { history: Reply; heroes: Reply }): typeof fetch {
+type Replies = Partial<Record<(typeof ROUTES)[keyof typeof ROUTES], Reply>>;
+
+function upstream(replies: Replies): typeof fetch {
   return async (input) => {
     const { pathname } = new URL(input instanceof Request ? input.url : input);
     if (!(pathname in ROUTES)) throw new Error(`unexpected upstream path ${pathname}`);
     const reply = replies[ROUTES[pathname as keyof typeof ROUTES]];
+    if (reply === undefined) throw new Error(`no reply set for ${pathname}`);
     if (reply === 'network-error') throw new TypeError('fetch failed');
     return new Response(JSON.stringify(reply.body), {
       status: reply.status,
@@ -38,7 +47,7 @@ function recordingCache(): CacheStore & { stored: string[] } {
   };
 }
 
-const almanacWith = (replies: { history: Reply; heroes: Reply }, cache: CacheStore = noCache) =>
+const almanacWith = (replies: Replies, cache: CacheStore = noCache) =>
   createAlmanac({ cache, cacheNamespace: 'test', fetch: upstream(replies) });
 
 describe('matchHistory', () => {
@@ -88,5 +97,41 @@ describe('matchHistory', () => {
     const cache = recordingCache();
     await almanacWith({ history: { status: 500, body: 'boom' }, heroes: { status: 200, body: heroes } }, cache).matchHistory(ME);
     expect(cache.stored).toEqual(['test:hero-index']);
+  });
+});
+
+describe('playerRank', () => {
+  it('resolves the tier name and subrank badge, dated by the last ranked match', async () => {
+    const result = await almanacWith({ rank: { status: 200, body: rank }, ranks: { status: 200, body: ranks } }).playerRank(ME);
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        kind: 'ranked', tier: 11, subrank: 2, name: 'Eternus',
+        badgeUrl: 'https://api.deadlock-api.com/v1/assets/ranks/11/2/image?format=webp', asOf: 1791940874,
+      },
+    });
+  });
+
+  it('keeps the rank when the rank index fails', async () => {
+    const result = await almanacWith({ rank: { status: 200, body: rank }, ranks: { status: 500, body: 'boom' } }).playerRank(ME);
+    expect(result.ok && result.value).toEqual({ kind: 'ranked', tier: 11, subrank: 2, name: null, badgeUrl: null, asOf: 1791940874 });
+  });
+
+  it('reports a protected account as an upstream 403', async () => {
+    const result = await almanacWith({ rank: { status: 403, body: 'protected' }, ranks: { status: 200, body: ranks } }).playerRank(ME);
+    expect(result).toEqual({ ok: false, error: { kind: 'upstream', status: 403 } });
+  });
+});
+
+describe('steamPersona', () => {
+  it('returns the persona name', async () => {
+    expect(await almanacWith({ steam: { status: 200, body: steamProfiles } }).steamPersona(ME)).toEqual({ ok: true, value: { name: 'Kashir' } });
+  });
+
+  it.each([
+    [{ status: 404, body: 'No Steam profile found.' }],
+    [{ status: 200, body: [] }],
+  ] as const)('returns null for %j', async (reply) => {
+    expect(await almanacWith({ steam: reply }).steamPersona(ME)).toEqual({ ok: true, value: null });
   });
 });

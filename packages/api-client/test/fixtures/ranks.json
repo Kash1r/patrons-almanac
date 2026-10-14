@@ -1,0 +1,60 @@
+[
+  {
+    "tier": 0,
+    "name": "Obscurus",
+    "images": {
+      "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank00_lg.png",
+      "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank00_lg.webp",
+      "small": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank00_lg.png",
+      "small_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank00_lg.webp"
+    },
+    "color": "#333333"
+  },
+  {
+    "tier": 11,
+    "name": "Eternus",
+    "images": {
+      "large": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank11_lg.png",
+      "large_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank11_lg.webp",
+      "chalk": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank11_chalk.png",
+      "chalk_webp": "https://assets-bucket.deadlock-api.com/assets-api-res/images/ranks/rank11_chalk.webp",
+      "large_subrank1": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image",
+      "large_subrank1_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image?format=webp",
+      "large_subrank2": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image",
+      "large_subrank2_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image?format=webp",
+      "large_subrank3": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image",
+      "large_subrank3_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image?format=webp",
+      "large_subrank4": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image",
+      "large_subrank4_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image?format=webp",
+      "large_subrank5": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image",
+      "large_subrank5_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image?format=webp",
+      "large_subrank6": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image",
+      "large_subrank6_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image?format=webp",
+      "small_subrank1": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image",
+      "small_subrank1_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image?format=webp",
+      "small_subrank2": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image",
+      "small_subrank2_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image?format=webp",
+      "small_subrank3": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image",
+      "small_subrank3_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image?format=webp",
+      "small_subrank4": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image",
+      "small_subrank4_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image?format=webp",
+      "small_subrank5": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image",
+      "small_subrank5_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image?format=webp",
+      "small_subrank6": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image",
+      "small_subrank6_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image?format=webp",
+      "subrank1": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image",
+      "subrank1_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/1/image?format=webp",
+      "subrank2": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image",
+      "subrank2_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/2/image?format=webp",
+      "subrank3": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image",
+      "subrank3_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/3/image?format=webp",
+      "subrank4": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image",
+      "subrank4_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/4/image?format=webp",
+      "subrank5": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image",
+      "subrank5_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/5/image?format=webp",
+      "subrank6": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image",
+      "subrank6_webp": "https://api.deadlock-api.com/v1/assets/ranks/11/6/image?format=webp"
+    },
+    "color": "#5CE9A9"
+  }
+]

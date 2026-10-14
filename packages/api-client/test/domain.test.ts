@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerMatchHistoryEntry } from '../src/generated/types.gen';
-import { type HeroId, joinHeroes, parseAccountId, parseHistory, toHeroIndex } from '../src/domain';
+import { type HeroId, joinHeroes, parseAccountId, parseHistory, resolveRank, toHeroIndex, toRankIndex } from '../src/domain';
 
 const REAL_ROW: PlayerMatchHistoryEntry = {
   account_id: 256939921, match_id: 115738165, hero_id: 65, hero_level: 32, start_time: 1791853191,
@@ -61,6 +61,30 @@ describe('heroes', () => {
       { kind: 'known', id: 1, name: 'Infernus', iconUrl: 'https://a/inferno_sm.webp' },
       { kind: 'unknown', id: 999 as HeroId },
     ]);
+  });
+});
+
+describe('ranks', () => {
+  const index = toRankIndex([
+    { tier: 0, name: 'Obscurus', images: { small_webp: 'https://a/rank00.webp' } },
+    { tier: 11, name: 'Eternus', images: { small_subrank1_webp: 'https://a/11/1.webp', small_subrank2: 'https://a/11/2.png' } },
+  ]);
+
+  it('indexes subrank badges, preferring webp, and gives Obscurus none', () => {
+    expect(index).toEqual({
+      '0': { name: 'Obscurus', badgeUrls: {} },
+      '11': { name: 'Eternus', badgeUrls: { '1': 'https://a/11/1.webp', '2': 'https://a/11/2.png' } },
+    });
+  });
+
+  it('reads tier 0 as unranked', () => {
+    expect(resolveRank(index, { badge: 0, rank: 0, subrank: 0, last_match: null })).toEqual({ kind: 'unranked' });
+  });
+
+  it('leaves the name and badge null for a tier the index lacks', () => {
+    expect(resolveRank(index, { badge: 125, rank: 12, subrank: 5 })).toEqual({
+      kind: 'ranked', tier: 12, subrank: 5, name: null, badgeUrl: null, asOf: null,
+    });
   });
 });
 

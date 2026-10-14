@@ -1,0 +1,21 @@
+[
+  {
+    "account_id": 256939921,
+    "personaname": "Kashir",
+    "profileurl": "https://steamcommunity.com/profiles/76561198217205649/",
+    "avatar": "https://avatars.steamstatic.com/eb1212235ac362395edfc66062fa244b8dfeba73.jpg",
+    "avatarmedium": "https://avatars.steamstatic.com/eb1212235ac362395edfc66062fa244b8dfeba73_medium.jpg",
+    "avatarfull": "https://avatars.steamstatic.com/eb1212235ac362395edfc66062fa244b8dfeba73_full.jpg",
+    "realname": null,
+    "countrycode": "US",
+    "last_updated": "2026-10-11T08:29:19Z",
+    "friends": [
+      {
+        "account_id": 34933717,
+        "friend_since": "2026-08-23T02:20:06Z"
+      }
+    ],
+    "matches_played_last_30d": 155,
+    "last_team_avg_badge": 0
+  }
+]
