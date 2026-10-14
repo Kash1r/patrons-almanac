@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import heroes from './fixtures/heroes.json';
 import history from './fixtures/match-history.json';
+import matchMetadata from './fixtures/match-metadata.json';
+import upgrades from './fixtures/upgrades.json';
 import rank from './fixtures/rank.json';
 import ranks from './fixtures/ranks.json';
 import steamProfiles from './fixtures/steam.json';
 import { type CacheStore, createAlmanac, noCache } from '../src/almanac';
-import { type AccountId, parseAccountId } from '../src/domain';
+import { type AccountId, type MatchId, parseAccountId } from '../src/domain';
+import { parseMatchId } from '../src/match';
 
 const ME = parseAccountId('256939921') as AccountId;
 
@@ -17,6 +20,8 @@ const ROUTES = {
   '/v1/players/256939921/rank': 'rank',
   '/v1/assets/ranks': 'ranks',
   '/v1/players/steam': 'steam',
+  '/v1/matches/116413049/metadata': 'match',
+  '/v1/assets/items/by-type/upgrade': 'items',
 } as const;
 
 type Replies = Partial<Record<(typeof ROUTES)[keyof typeof ROUTES], Reply>>;
@@ -133,5 +138,60 @@ describe('steamPersona', () => {
     [{ status: 200, body: [] }],
   ] as const)('returns null for %j', async (reply) => {
     expect(await almanacWith({ steam: reply }).steamPersona(ME)).toEqual({ ok: true, value: null });
+  });
+});
+
+describe('matchDetail', () => {
+  const MATCH = parseMatchId('116413049') as MatchId;
+  const healthy = {
+    match: { status: 200, body: matchMetadata },
+    heroes: { status: 200, body: heroes },
+    items: { status: 200, body: upgrades },
+    steam: { status: 200, body: steamProfiles },
+  } as const;
+
+  it('joins heroes, shop items and names, team by team in slot order', async () => {
+    const result = await almanacWith(healthy).matchDetail(MATCH);
+    if (!result.ok || result.value === null) throw new Error('expected a match');
+    const { players, winner, durationS } = result.value;
+    expect([winner, durationS, players.length]).toEqual(['amber', 1682, 12]);
+    expect(players.map((p) => p.slot)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    const me = players.find((p) => p.accountId === 256939921)!;
+    expect([me.name, me.team, me.hero.id, me.kills, me.deaths, me.assists, me.souls]).toEqual(['Kashir', 'sapphire', 25, 6, 5, 13, 27332]);
+    expect(players.find((p) => p.accountId !== 256939921)!.name).toBeNull();
+    expect(me.items!.slice(0, 3).map((i) => [i.item.name, i.boughtAtS, i.soldAtS])).toEqual([
+      ['High-Velocity Rounds', 97, 172],
+      ['Opening Rounds', 172, null],
+      ['Extra Health', 271, 694],
+    ]);
+    expect(me.curve.map((c) => c.atS)).toEqual([180, 360, 540, 720, 900, 1200, 1500, 1682]);
+    expect(me.heroDamage).toBe(me.curve.at(-1)!.heroDamage);
+  });
+
+  it('asks without the Steam fallback', async () => {
+    const urls: string[] = [];
+    const fetchSpy: typeof fetch = (input, init) => {
+      urls.push(input instanceof Request ? input.url : String(input));
+      return upstream(healthy)(input, init);
+    };
+    await createAlmanac({ cache: noCache, cacheNamespace: 'test', fetch: fetchSpy }).matchDetail(MATCH);
+    expect(urls.find((u) => u.includes('/metadata'))).toContain('disable_steam=true');
+  });
+
+  it('answers null for an unknown match, and does not store it', async () => {
+    const cache = recordingCache();
+    const result = await almanacWith({ ...healthy, match: { status: 404, body: 'not found' } }, cache).matchDetail(MATCH);
+    expect(result).toEqual({ ok: true, value: null });
+    expect(cache.stored).not.toContain('test:match:116413049');
+  });
+
+  it('keeps the match when items and names fail, marking items unavailable', async () => {
+    const result = await almanacWith({ ...healthy, items: { status: 500, body: 'boom' }, steam: 'network-error' }).matchDetail(MATCH);
+    expect(result.ok && result.value?.players.map((p) => [p.items, p.name])).toEqual(Array.from({ length: 12 }, () => [null, null]));
+  });
+
+  it('reports a body without match_info as drift', async () => {
+    const result = await almanacWith({ ...healthy, match: { status: 200, body: { status: 'weird' } } }).matchDetail(MATCH);
+    expect(result).toEqual({ ok: false, error: { kind: 'drift' } });
   });
 });

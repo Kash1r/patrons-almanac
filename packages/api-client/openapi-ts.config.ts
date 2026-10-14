@@ -7,6 +7,8 @@ const OPERATIONS = [
   'GET /v1/assets/ranks',
   'GET /v1/players/{account_id}/rank',
   'GET /v1/players/steam',
+  'GET /v1/matches/{match_id}/metadata',
+  'GET /v1/assets/items/by-type/{type}',
 ];
 
 export default defineConfig({

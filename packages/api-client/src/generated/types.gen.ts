@@ -4,6 +4,82 @@ export type ClientOptions = {
     baseUrl: 'https://api.deadlock-api.com' | (string & {});
 };
 
+export type Ability = {
+    ability_type?: AbilityType | null;
+    behaviours?: Array<string> | null;
+    boss_damage_scale?: number | null;
+    class_name: string;
+    dependant_abilities?: Array<string> | null;
+    dependent_abilities?: {
+        [key: string]: DependantAbilities;
+    } | null;
+    description: AbilityDescription;
+    grant_ammo_on_cast?: boolean | null;
+    hero?: number | null;
+    heroes?: Array<number> | null;
+    id: number;
+    image?: string | null;
+    image_webp?: string | null;
+    name: string;
+    properties?: {
+        [key: string]: ItemProperty;
+    } | null;
+    start_trained?: boolean | null;
+    tooltip_details?: AbilityTooltipDetails | null;
+    type: ItemType;
+    update_time?: number | null;
+    upgrades?: Array<RawAbilityUpgrade> | null;
+    videos?: AbilityVideos | null;
+    weapon_info?: RawItemWeaponInfoInner | null;
+};
+
+export type AbilityActivation = 'hold_toggle' | 'instant_cast' | 'on_button_is_down' | 'passive' | 'press' | 'press_toggle' | 'instant_cast_toggle';
+
+export type AbilityDescription = {
+    active?: string | null;
+    desc?: string | null;
+    passive?: string | null;
+    quip?: string | null;
+    t1_desc?: string | null;
+    t2_desc?: string | null;
+    t3_desc?: string | null;
+};
+
+export type AbilityImbue = 'imbue_active' | 'imbue_active_non_ult' | 'imbue_modifier_value';
+
+export type AbilitySectionType = 'innate' | 'active' | 'passive';
+
+export type AbilityTooltipDetails = {
+    additional_header_properties?: Array<string> | null;
+    info_sections?: Array<TooltipDetailsInfoSection> | null;
+};
+
+export type AbilityType = 'innate' | 'item' | 'signature' | 'ultimate' | 'weapon' | 'melee' | 'cosmetic' | 'held';
+
+export type AbilityVideos = {
+    mp4?: string | null;
+    webm?: string | null;
+};
+
+/**
+ * Broker ("City Never Sleeps", build 6711+) corruption data of an upgrade.
+ */
+export type CorruptedItemInfo = {
+    /**
+     * Names of corrupted penalty definitions (`generic_data`) that can never
+     * roll on this item.
+     */
+    excluded_penalties: Array<string>;
+    /**
+     * Property bonuses the corrupted variant gains.
+     */
+    property_upgrades: Array<RawAbilityUpgradePropertyUpgrade>;
+};
+
+export type DependantAbilities = {
+    flags?: Array<string> | null;
+};
+
 export type HashMapHeroItemTypeString = {
     [key: string]: string;
 };
@@ -219,6 +295,44 @@ export type HeroStatsUiDisplay = {
 };
 
 export type HeroType = 'assassin' | 'brawler' | 'marksman' | 'mystic';
+
+export type Item = Ability | Weapon | Upgrade;
+
+export type ItemProperty = {
+    can_set_token_override?: boolean | null;
+    conditional?: string | null;
+    css_class?: string | null;
+    disable_value?: string | null;
+    display_units?: string | null;
+    icon?: string | null;
+    label?: string | null;
+    loc_token_override?: string | null;
+    negative_attribute?: boolean | null;
+    postfix?: string | null;
+    postvalue_label?: string | null;
+    prefix?: string | null;
+    provided_property_type?: string | null;
+    /**
+     * Raw `ABILITY_UPGRADE_BIT_*` flags the ability needs for this property
+     * to apply (e.g. `ABILITY_UPGRADE_BIT_TRAINED`, `ABILITY_UPGRADE_BIT_4`).
+     */
+    required_upgrade_bits?: Array<string> | null;
+    scale_function?: RawItemPropertyScaleFunctionSubclass | null;
+    street_brawl_value?: string | null;
+    usage_flags?: Array<StatsUsageFlag> | null;
+    /**
+     * Raw JSON value preserves the source distinction between numeric and
+     * stringly-typed bonuses (`"14.5"` vs `14.5`).
+     */
+    value?: string | null | number;
+};
+
+export type ItemSlotType = 'weapon' | 'spirit' | 'vitality';
+
+/**
+ * Discriminator for the `type` field on every item variant.
+ */
+export type ItemType = 'ability' | 'weapon' | 'upgrade';
 
 export type LastRankedMatch = {
     match_id: number;
@@ -466,6 +580,83 @@ export type RankResponse = {
     subrank: number;
 };
 
+export type RawAbilityUpgrade = {
+    property_upgrades?: Array<RawAbilityUpgradePropertyUpgrade>;
+};
+
+export type RawAbilityUpgradePropertyUpgrade = {
+    bonus: string;
+    /**
+     * Corrupted item bonuses only (build 6711+).
+     */
+    fixed_corrupted_bonus?: boolean | null;
+    name: string;
+    /**
+     * Corrupted item bonuses only (build 6711+).
+     */
+    round_corrupted_bonus?: boolean | null;
+    scale_stat_filter?: string | null;
+    upgrade_type?: string | null;
+};
+
+export type RawCustomCrosshairSettings = {
+    m_DotColor?: Array<number> | null;
+    m_DotOutlineColor?: Array<number> | null;
+    m_PipColor?: Array<number> | null;
+    m_PipOutlineColor?: Array<number> | null;
+    m_SpreadIndicatingElement?: string | null;
+    m_flBaseSpread?: number | null;
+    m_flDotOpacity?: number | null;
+    m_flDotOutlineOpacity?: number | null;
+    m_flPipOpacity?: number | null;
+    m_flPipOutlineOpacity?: number | null;
+    m_nDotOutlineGap?: number | null;
+    m_nDotOutlineWidth?: number | null;
+    m_nDotRadius?: number | null;
+    m_nPipHeight?: number | null;
+    m_nPipOutlineGap?: number | null;
+    m_nPipOutlineWidth?: number | null;
+    m_nPipWidth?: number | null;
+};
+
+export type RawItemPropertyScaleFunctionSubclass = {
+    class_name?: string | null;
+    scaling_stats?: Array<string> | null;
+    specific_stat_scale_type?: string | null;
+    stat_scale?: number | null;
+    street_brawl_stat_scale?: number | null;
+    subclass_name?: string | null;
+};
+
+export type RawItemWeaponInfoBulletSpeedCurve = {
+    domain_maxs: Array<number>;
+    domain_mins: Array<number>;
+    spline?: Array<RawItemWeaponInfoBulletSpeedCurveSpline> | null;
+};
+
+export type RawItemWeaponInfoBulletSpeedCurveSpline = {
+    slope_incoming: number;
+    slope_outgoing: number;
+    x: number;
+    y: number;
+};
+
+export type RawItemWeaponInfoInner = {
+    m_BulletSpeedCurve?: RawItemWeaponInfoBulletSpeedCurve | null;
+};
+
+export type RawWeaponInfoHorizontalRecoil = {
+    burst_exponent?: number | null;
+    range?: unknown;
+};
+
+export type RawWeaponInfoVerticalRecoil = {
+    burst_constant?: number | null;
+    burst_exponent?: number | null;
+    burst_slope?: number | null;
+    range?: unknown;
+};
+
 export type ShopSpiritStatsDisplay = {
     display_stats: Array<string>;
 };
@@ -532,6 +723,8 @@ export type StatsDisplay = {
     weapon_stats: Array<string>;
 };
 
+export type StatsUsageFlag = 'ConditionallyApplied' | 'ConditionallyEnemyApplied' | 'IntrinsicallyProvidedInAbility' | 'IntrinsicallyProvidedInModifier';
+
 export type SteamFriend = {
     account_id: number;
     friend_since: string;
@@ -550,6 +743,201 @@ export type SteamProfile = {
     personaname: string;
     profileurl: string;
     realname?: string | null;
+};
+
+export type TooltipDetailsBlock = {
+    loc_string?: string | null;
+    properties?: Array<TooltipDetailsBlockProperty> | null;
+};
+
+export type TooltipDetailsBlockProperty = {
+    important_property?: string | null;
+    important_property_icon?: string | null;
+    requires_ability_upgrade?: boolean | null;
+    show_property_value?: boolean | null;
+    status_effect_name?: string | null;
+    status_effect_value?: string | null;
+};
+
+export type TooltipDetailsInfoSection = {
+    basic_properties?: Array<string> | null;
+    loc_string?: string | null;
+    properties_block?: Array<TooltipDetailsBlock> | null;
+    property_upgrade_required?: string | null;
+};
+
+export type Upgrade = {
+    activation: AbilityActivation;
+    class_name: string;
+    component_items?: Array<string> | null;
+    corrupted_info?: CorruptedItemInfo | null;
+    cost?: number | null;
+    description?: UpgradeDescription | null;
+    disable_item_target?: string | null;
+    disabled?: boolean | null;
+    /**
+     * Shop filters (`snake_case` `EShopFilter*` names) this item is hidden from
+     * even though its stats would match them.
+     */
+    disabled_shop_filters?: Array<string> | null;
+    hero?: number | null;
+    heroes?: Array<number> | null;
+    id: number;
+    image?: string | null;
+    image_webp?: string | null;
+    imbue?: AbilityImbue | null;
+    is_active_item: boolean;
+    item_slot_type: ItemSlotType;
+    item_tier: number;
+    name: string;
+    properties?: {
+        [key: string]: UpgradeProperty;
+    } | null;
+    /**
+     * Extra shop filters (`snake_case` `EShopFilter*` names, e.g. `status_grounded`)
+     * this item shows up under, beyond those derived from its stats.
+     */
+    shop_filters?: Array<string> | null;
+    shop_image?: string | null;
+    shop_image_small?: string | null;
+    shop_image_small_webp?: string | null;
+    shop_image_webp?: string | null;
+    shop_version?: number | null;
+    shopable: boolean;
+    start_trained?: boolean | null;
+    tooltip_sections?: Array<UpgradeTooltipSection> | null;
+    type: ItemType;
+    update_time?: number | null;
+    upgrades?: Array<RawAbilityUpgrade> | null;
+    weapon_info?: RawItemWeaponInfoInner | null;
+};
+
+export type UpgradeDescription = {
+    active?: string | null;
+    desc?: string | null;
+    desc2?: string | null;
+    passive?: string | null;
+};
+
+export type UpgradeProperty = ItemProperty & {
+    tooltip_is_elevated?: boolean | null;
+    tooltip_is_important?: boolean | null;
+    tooltip_section?: AbilitySectionType | null;
+};
+
+export type UpgradeTooltipImportantPropertyWithIcon = {
+    icon?: string | null;
+    localized_name?: string | null;
+    name?: string | null;
+};
+
+export type UpgradeTooltipSection = {
+    section_attributes?: Array<UpgradeTooltipSectionAttribute> | null;
+    section_type?: AbilitySectionType | null;
+};
+
+export type UpgradeTooltipSectionAttribute = {
+    elevated_properties?: Array<string> | null;
+    important_properties?: Array<string> | null;
+    important_properties_with_icon?: Array<UpgradeTooltipImportantPropertyWithIcon> | null;
+    loc_string?: string | null;
+    properties?: Array<string> | null;
+};
+
+export type Weapon = {
+    class_name: string;
+    crosshair_css_class?: string | null;
+    custom_crosshair_settings?: RawCustomCrosshairSettings | null;
+    hero?: number | null;
+    heroes?: Array<number> | null;
+    id: number;
+    image?: string | null;
+    image_webp?: string | null;
+    name: string;
+    properties?: {
+        [key: string]: ItemProperty;
+    } | null;
+    start_trained?: boolean | null;
+    type: ItemType;
+    update_time?: number | null;
+    use_custom_crosshair_settings?: boolean | null;
+    weapon_info?: WeaponInfo | null;
+};
+
+export type WeaponInfo = {
+    aiming_shot_spread_penalty?: unknown;
+    build_up_rate?: number | null;
+    bullet_damage?: number | null;
+    bullet_gravity_scale?: number | null;
+    bullet_handler_type?: string | null;
+    bullet_inherit_shooter_velocity_scale?: number | null;
+    bullet_lifetime?: number | null;
+    bullet_radius?: number | null;
+    bullet_radius_vs_world?: number | null;
+    bullet_reflect_amount?: number | null;
+    bullet_reflect_scale?: number | null;
+    bullet_speed?: number | null;
+    bullet_speed_curve?: RawItemWeaponInfoBulletSpeedCurve | null;
+    bullet_whiz_distance?: number | null;
+    bullets?: number | null;
+    bullets_per_second?: number | null;
+    bullets_per_second_with_reload?: number | null;
+    burst_shot_cooldown?: number | null;
+    burst_shot_count?: number | null;
+    can_zoom?: boolean | null;
+    clip_size?: number | null;
+    crit_bonus_against_npcs?: number | null;
+    crit_bonus_end?: number | null;
+    crit_bonus_end_range?: number | null;
+    crit_bonus_start?: number | null;
+    crit_bonus_start_range?: number | null;
+    cycle_time?: number | null;
+    damage_falloff_bias?: number | null;
+    damage_falloff_end_range?: number | null;
+    damage_falloff_end_scale?: number | null;
+    damage_falloff_start_range?: number | null;
+    damage_falloff_start_scale?: number | null;
+    damage_per_magazine?: number | null;
+    damage_per_second?: number | null;
+    damage_per_second_with_reload?: number | null;
+    damage_per_shot?: number | null;
+    horizontal_punch?: number | null;
+    horizontal_recoil?: RawWeaponInfoHorizontalRecoil | null;
+    intra_burst_cycle_time?: number | null;
+    is_semi_auto?: boolean | null;
+    low_ammo_indicator_threshold?: number | null;
+    max_spin_cycle_time?: number | null;
+    range?: number | null;
+    recoil_recovery_delay_factor?: number | null;
+    recoil_recovery_speed?: number | null;
+    recoil_seed?: number | null;
+    recoil_shot_index_recovery_time_factor?: number | null;
+    recoil_speed?: number | null;
+    recycle_time?: number | null;
+    reload_duration?: number | null;
+    reload_move_speed?: number | null;
+    reload_single_bullets?: boolean | null;
+    reload_single_bullets_allow_cancel?: boolean | null;
+    reload_single_bullets_initial_delay?: number | null;
+    scatter_yaw_scale?: number | null;
+    semi_auto_cycle_rate?: number | null;
+    shoot_move_speed_percent?: number | null;
+    shoot_spread_penalty_decay?: number | null;
+    shoot_spread_penalty_decay_delay?: number | null;
+    shoot_spread_penalty_per_shot?: number | null;
+    shooting_up_spread_penalty?: number | null;
+    shots_per_second?: number | null;
+    shots_per_second_with_reload?: number | null;
+    spin_decay_rate?: number | null;
+    spin_increase_rate?: number | null;
+    spins_up?: boolean | null;
+    spread?: number | null;
+    standing_shot_spread_penalty?: unknown;
+    standing_spread?: number | null;
+    vertical_punch?: number | null;
+    vertical_recoil?: RawWeaponInfoVerticalRecoil | null;
+    zoom_fov?: number | null;
+    zoom_move_speed_percent?: number | null;
 };
 
 export type ListHeroesData = {
@@ -592,6 +980,36 @@ export type ListHeroesResponses = {
 
 export type ListHeroesResponse = ListHeroesResponses[keyof ListHeroesResponses];
 
+export type GetItemsByTypeData = {
+    body?: never;
+    path: {
+        /**
+         * Item type: `ability`, `weapon`, or `upgrade`.
+         */
+        type: ItemType;
+    };
+    query?: {
+        /**
+         * Language code. Defaults to `english`.
+         */
+        language?: 'brazilian' | 'bulgarian' | 'czech' | 'danish' | 'dutch' | 'english' | 'finnish' | 'french' | 'german' | 'greek' | 'hungarian' | 'indonesian' | 'italian' | 'japanese' | 'koreana' | 'latam' | 'norwegian' | 'polish' | 'portuguese' | 'romanian' | 'russian' | 'schinese' | 'spanish' | 'swedish' | 'tchinese' | 'thai' | 'turkish' | 'ukrainian' | 'vietnamese' | null;
+        /**
+         * Client/game version (e.g. `6518`). Defaults to the latest known version.
+         */
+        client_version?: number | null;
+    };
+    url: '/v1/assets/items/by-type/{type}';
+};
+
+export type GetItemsByTypeResponses = {
+    /**
+     * OK
+     */
+    200: Array<Item>;
+};
+
+export type GetItemsByTypeResponse = GetItemsByTypeResponses[keyof GetItemsByTypeResponses];
+
 export type ListRanksData = {
     body?: never;
     path?: never;
@@ -627,6 +1045,51 @@ export type ListRanksResponses = {
 };
 
 export type ListRanksResponse = ListRanksResponses[keyof ListRanksResponses];
+
+export type MetadataData = {
+    body?: never;
+    path: {
+        /**
+         * The match ID
+         */
+        match_id: number;
+    };
+    query?: {
+        is_custom?: boolean | null;
+        /**
+         * If `true`, skip the Steam fallback when the metadata is not available in S3
+         * and return an error instead.
+         */
+        disable_steam?: boolean | null;
+    };
+    url: '/v1/matches/{match_id}/metadata';
+};
+
+export type MetadataErrors = {
+    /**
+     * Provided parameters are invalid.
+     */
+    400: unknown;
+    /**
+     * Match metadata not found
+     */
+    404: unknown;
+    /**
+     * Rate limit exceeded
+     */
+    429: unknown;
+    /**
+     * Fetching or parsing match metadata failed
+     */
+    500: unknown;
+};
+
+export type MetadataResponses = {
+    /**
+     * Match metadata, see protobuf type: CMsgMatchMetaDataContents
+     */
+    200: unknown;
+};
 
 export type SteamData = {
     body?: never;

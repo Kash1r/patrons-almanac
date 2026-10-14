@@ -19,10 +19,25 @@ export const SPEC_PATCHES: readonly SpecPatch[] = [
       'Measured: 898 matches and 65 heroes parse after the patch.',
     apply: dropIntegerFormats,
   },
+  {
+    id: 'item-property-value-number',
+    evidence:
+      'ItemProperty.value is typed string | null, and its own description says it preserves numeric and string ' +
+      'bonuses ("14.5" vs 14.5). Live /v1/assets/items/by-type/upgrade sends numbers (AbilityCooldown.value), ' +
+      'so every response failed validation. Measured: 250 upgrades parse after the patch.',
+    apply: allowNumericItemPropertyValue,
+  },
 ];
 
 export function applySpecPatches(spec: OpenApiDocument): void {
   for (const patch of SPEC_PATCHES) patch.apply(spec);
+}
+
+function allowNumericItemPropertyValue(spec: OpenApiDocument): number {
+  const value = (spec as OpenApi.V3_1_X).components?.schemas?.ItemProperty?.properties?.value;
+  if (typeof value !== 'object' || !Array.isArray(value.type) || value.type.includes('number')) return 0;
+  value.type = [...value.type, 'number'];
+  return 1;
 }
 
 function dropIntegerFormats(node: unknown): number {
