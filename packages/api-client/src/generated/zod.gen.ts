@@ -2,6 +2,72 @@
 
 import * as z from 'zod';
 
+export const zAbilityActivation = z.enum([
+    'hold_toggle',
+    'instant_cast',
+    'on_button_is_down',
+    'passive',
+    'press',
+    'press_toggle',
+    'instant_cast_toggle'
+]);
+
+export type abilityActivationZodType = z.infer<typeof zAbilityActivation>;
+
+export const zAbilityDescription = z.object({
+    active: z.string().nullish(),
+    desc: z.string().nullish(),
+    passive: z.string().nullish(),
+    quip: z.string().nullish(),
+    t1_desc: z.string().nullish(),
+    t2_desc: z.string().nullish(),
+    t3_desc: z.string().nullish()
+});
+
+export type abilityDescriptionZodType = z.infer<typeof zAbilityDescription>;
+
+export const zAbilityImbue = z.enum([
+    'imbue_active',
+    'imbue_active_non_ult',
+    'imbue_modifier_value'
+]);
+
+export type abilityImbueZodType = z.infer<typeof zAbilityImbue>;
+
+export const zAbilitySectionType = z.enum([
+    'innate',
+    'active',
+    'passive'
+]);
+
+export type abilitySectionTypeZodType = z.infer<typeof zAbilitySectionType>;
+
+export const zAbilityType = z.enum([
+    'innate',
+    'item',
+    'signature',
+    'ultimate',
+    'weapon',
+    'melee',
+    'cosmetic',
+    'held'
+]);
+
+export type abilityTypeZodType = z.infer<typeof zAbilityType>;
+
+export const zAbilityVideos = z.object({
+    mp4: z.string().nullish(),
+    webm: z.string().nullish()
+});
+
+export type abilityVideosZodType = z.infer<typeof zAbilityVideos>;
+
+export const zDependantAbilities = z.object({
+    flags: z.array(z.string()).nullish()
+});
+
+export type dependantAbilitiesZodType = z.infer<typeof zDependantAbilities>;
+
 export const zHashMapHeroItemTypeString = z.record(z.string(), z.string());
 
 export type hashMapHeroItemTypeStringZodType = z.infer<typeof zHashMapHeroItemTypeString>;
@@ -159,6 +225,25 @@ export const zHeroType = z.enum([
 
 export type heroTypeZodType = z.infer<typeof zHeroType>;
 
+export const zItemSlotType = z.enum([
+    'weapon',
+    'spirit',
+    'vitality'
+]);
+
+export type itemSlotTypeZodType = z.infer<typeof zItemSlotType>;
+
+/**
+ * Discriminator for the `type` field on every item variant.
+ */
+export const zItemType = z.enum([
+    'ability',
+    'weapon',
+    'upgrade'
+]);
+
+export type itemTypeZodType = z.infer<typeof zItemType>;
+
 export const zLastRankedMatch = z.object({
     match_id: z.int().gte(0),
     player_rank_consumed_demotion_protection: z.boolean().nullish(),
@@ -275,6 +360,105 @@ export const zRankResponse = z.object({
 });
 
 export type rankResponseZodType = z.infer<typeof zRankResponse>;
+
+export const zRawAbilityUpgradePropertyUpgrade = z.object({
+    bonus: z.string(),
+    fixed_corrupted_bonus: z.boolean().nullish(),
+    name: z.string(),
+    round_corrupted_bonus: z.boolean().nullish(),
+    scale_stat_filter: z.string().nullish(),
+    upgrade_type: z.string().nullish()
+});
+
+export type rawAbilityUpgradePropertyUpgradeZodType = z.infer<typeof zRawAbilityUpgradePropertyUpgrade>;
+
+/**
+ * Broker ("City Never Sleeps", build 6711+) corruption data of an upgrade.
+ */
+export const zCorruptedItemInfo = z.object({
+    excluded_penalties: z.array(z.string()),
+    property_upgrades: z.array(zRawAbilityUpgradePropertyUpgrade)
+});
+
+export type corruptedItemInfoZodType = z.infer<typeof zCorruptedItemInfo>;
+
+export const zRawAbilityUpgrade = z.object({
+    property_upgrades: z.array(zRawAbilityUpgradePropertyUpgrade).optional()
+});
+
+export type rawAbilityUpgradeZodType = z.infer<typeof zRawAbilityUpgrade>;
+
+export const zRawCustomCrosshairSettings = z.object({
+    m_DotColor: z.array(z.int()).nullish(),
+    m_DotOutlineColor: z.array(z.int()).nullish(),
+    m_PipColor: z.array(z.int()).nullish(),
+    m_PipOutlineColor: z.array(z.int()).nullish(),
+    m_SpreadIndicatingElement: z.string().nullish(),
+    m_flBaseSpread: z.number().nullish(),
+    m_flDotOpacity: z.number().nullish(),
+    m_flDotOutlineOpacity: z.number().nullish(),
+    m_flPipOpacity: z.number().nullish(),
+    m_flPipOutlineOpacity: z.number().nullish(),
+    m_nDotOutlineGap: z.int().nullish(),
+    m_nDotOutlineWidth: z.int().nullish(),
+    m_nDotRadius: z.int().nullish(),
+    m_nPipHeight: z.int().nullish(),
+    m_nPipOutlineGap: z.int().nullish(),
+    m_nPipOutlineWidth: z.int().nullish(),
+    m_nPipWidth: z.int().nullish()
+});
+
+export type rawCustomCrosshairSettingsZodType = z.infer<typeof zRawCustomCrosshairSettings>;
+
+export const zRawItemPropertyScaleFunctionSubclass = z.object({
+    class_name: z.string().nullish(),
+    scaling_stats: z.array(z.string()).nullish(),
+    specific_stat_scale_type: z.string().nullish(),
+    stat_scale: z.number().nullish(),
+    street_brawl_stat_scale: z.number().nullish(),
+    subclass_name: z.string().nullish()
+});
+
+export type rawItemPropertyScaleFunctionSubclassZodType = z.infer<typeof zRawItemPropertyScaleFunctionSubclass>;
+
+export const zRawItemWeaponInfoBulletSpeedCurveSpline = z.object({
+    slope_incoming: z.number(),
+    slope_outgoing: z.number(),
+    x: z.number(),
+    y: z.number()
+});
+
+export type rawItemWeaponInfoBulletSpeedCurveSplineZodType = z.infer<typeof zRawItemWeaponInfoBulletSpeedCurveSpline>;
+
+export const zRawItemWeaponInfoBulletSpeedCurve = z.object({
+    domain_maxs: z.array(z.number()),
+    domain_mins: z.array(z.number()),
+    spline: z.array(zRawItemWeaponInfoBulletSpeedCurveSpline).nullish()
+});
+
+export type rawItemWeaponInfoBulletSpeedCurveZodType = z.infer<typeof zRawItemWeaponInfoBulletSpeedCurve>;
+
+export const zRawItemWeaponInfoInner = z.object({
+    m_BulletSpeedCurve: zRawItemWeaponInfoBulletSpeedCurve.nullish()
+});
+
+export type rawItemWeaponInfoInnerZodType = z.infer<typeof zRawItemWeaponInfoInner>;
+
+export const zRawWeaponInfoHorizontalRecoil = z.object({
+    burst_exponent: z.number().nullish(),
+    range: z.unknown().optional()
+});
+
+export type rawWeaponInfoHorizontalRecoilZodType = z.infer<typeof zRawWeaponInfoHorizontalRecoil>;
+
+export const zRawWeaponInfoVerticalRecoil = z.object({
+    burst_constant: z.number().nullish(),
+    burst_exponent: z.number().nullish(),
+    burst_slope: z.number().nullish(),
+    range: z.unknown().optional()
+});
+
+export type rawWeaponInfoVerticalRecoilZodType = z.infer<typeof zRawWeaponInfoVerticalRecoil>;
 
 export const zShopSpiritStatsDisplay = z.object({
     display_stats: z.array(z.string())
@@ -399,6 +583,41 @@ export const zHero = z.object({
 
 export type heroZodType = z.infer<typeof zHero>;
 
+export const zStatsUsageFlag = z.enum([
+    'ConditionallyApplied',
+    'ConditionallyEnemyApplied',
+    'IntrinsicallyProvidedInAbility',
+    'IntrinsicallyProvidedInModifier'
+]);
+
+export type statsUsageFlagZodType = z.infer<typeof zStatsUsageFlag>;
+
+export const zItemProperty = z.object({
+    can_set_token_override: z.boolean().nullish(),
+    conditional: z.string().nullish(),
+    css_class: z.string().nullish(),
+    disable_value: z.string().nullish(),
+    display_units: z.string().nullish(),
+    icon: z.string().nullish(),
+    label: z.string().nullish(),
+    loc_token_override: z.string().nullish(),
+    negative_attribute: z.boolean().nullish(),
+    postfix: z.string().nullish(),
+    postvalue_label: z.string().nullish(),
+    prefix: z.string().nullish(),
+    provided_property_type: z.string().nullish(),
+    required_upgrade_bits: z.array(z.string()).nullish(),
+    scale_function: zRawItemPropertyScaleFunctionSubclass.nullish(),
+    street_brawl_value: z.string().nullish(),
+    usage_flags: z.array(zStatsUsageFlag).nullish(),
+    value: z.union([
+        z.string(),
+        z.number()
+    ]).nullish()
+});
+
+export type itemPropertyZodType = z.infer<typeof zItemProperty>;
+
 export const zSteamFriend = z.object({
     account_id: z.int().gte(0),
     friend_since: z.iso.datetime()
@@ -422,6 +641,253 @@ export const zSteamProfile = z.object({
 });
 
 export type steamProfileZodType = z.infer<typeof zSteamProfile>;
+
+export const zTooltipDetailsBlockProperty = z.object({
+    important_property: z.string().nullish(),
+    important_property_icon: z.string().nullish(),
+    requires_ability_upgrade: z.boolean().nullish(),
+    show_property_value: z.boolean().nullish(),
+    status_effect_name: z.string().nullish(),
+    status_effect_value: z.string().nullish()
+});
+
+export type tooltipDetailsBlockPropertyZodType = z.infer<typeof zTooltipDetailsBlockProperty>;
+
+export const zTooltipDetailsBlock = z.object({
+    loc_string: z.string().nullish(),
+    properties: z.array(zTooltipDetailsBlockProperty).nullish()
+});
+
+export type tooltipDetailsBlockZodType = z.infer<typeof zTooltipDetailsBlock>;
+
+export const zTooltipDetailsInfoSection = z.object({
+    basic_properties: z.array(z.string()).nullish(),
+    loc_string: z.string().nullish(),
+    properties_block: z.array(zTooltipDetailsBlock).nullish(),
+    property_upgrade_required: z.string().nullish()
+});
+
+export type tooltipDetailsInfoSectionZodType = z.infer<typeof zTooltipDetailsInfoSection>;
+
+export const zAbilityTooltipDetails = z.object({
+    additional_header_properties: z.array(z.string()).nullish(),
+    info_sections: z.array(zTooltipDetailsInfoSection).nullish()
+});
+
+export type abilityTooltipDetailsZodType = z.infer<typeof zAbilityTooltipDetails>;
+
+export const zAbility = z.object({
+    ability_type: zAbilityType.nullish(),
+    behaviours: z.array(z.string()).nullish(),
+    boss_damage_scale: z.number().nullish(),
+    class_name: z.string(),
+    dependant_abilities: z.array(z.string()).nullish(),
+    dependent_abilities: z.record(z.string(), zDependantAbilities).nullish(),
+    description: zAbilityDescription,
+    grant_ammo_on_cast: z.boolean().nullish(),
+    hero: z.int().gte(0).nullish(),
+    heroes: z.array(z.int().gte(0)).nullish(),
+    id: z.int().gte(0),
+    image: z.string().nullish(),
+    image_webp: z.string().nullish(),
+    name: z.string(),
+    properties: z.record(z.string(), zItemProperty).nullish(),
+    start_trained: z.boolean().nullish(),
+    tooltip_details: zAbilityTooltipDetails.nullish(),
+    type: zItemType,
+    update_time: z.int().nullish(),
+    upgrades: z.array(zRawAbilityUpgrade).nullish(),
+    videos: zAbilityVideos.nullish(),
+    weapon_info: zRawItemWeaponInfoInner.nullish()
+});
+
+export type abilityZodType = z.infer<typeof zAbility>;
+
+export const zUpgradeDescription = z.object({
+    active: z.string().nullish(),
+    desc: z.string().nullish(),
+    desc2: z.string().nullish(),
+    passive: z.string().nullish()
+});
+
+export type upgradeDescriptionZodType = z.infer<typeof zUpgradeDescription>;
+
+export const zUpgradeProperty = zItemProperty.and(z.object({
+    tooltip_is_elevated: z.boolean().nullish(),
+    tooltip_is_important: z.boolean().nullish(),
+    tooltip_section: zAbilitySectionType.nullish()
+}));
+
+export type upgradePropertyZodType = z.infer<typeof zUpgradeProperty>;
+
+export const zUpgradeTooltipImportantPropertyWithIcon = z.object({
+    icon: z.string().nullish(),
+    localized_name: z.string().nullish(),
+    name: z.string().nullish()
+});
+
+export type upgradeTooltipImportantPropertyWithIconZodType = z.infer<typeof zUpgradeTooltipImportantPropertyWithIcon>;
+
+export const zUpgradeTooltipSectionAttribute = z.object({
+    elevated_properties: z.array(z.string()).nullish(),
+    important_properties: z.array(z.string()).nullish(),
+    important_properties_with_icon: z.array(zUpgradeTooltipImportantPropertyWithIcon).nullish(),
+    loc_string: z.string().nullish(),
+    properties: z.array(z.string()).nullish()
+});
+
+export type upgradeTooltipSectionAttributeZodType = z.infer<typeof zUpgradeTooltipSectionAttribute>;
+
+export const zUpgradeTooltipSection = z.object({
+    section_attributes: z.array(zUpgradeTooltipSectionAttribute).nullish(),
+    section_type: zAbilitySectionType.nullish()
+});
+
+export type upgradeTooltipSectionZodType = z.infer<typeof zUpgradeTooltipSection>;
+
+export const zUpgrade = z.object({
+    activation: zAbilityActivation,
+    class_name: z.string(),
+    component_items: z.array(z.string()).nullish(),
+    corrupted_info: zCorruptedItemInfo.nullish(),
+    cost: z.int().gte(0).nullish(),
+    description: zUpgradeDescription.nullish(),
+    disable_item_target: z.string().nullish(),
+    disabled: z.boolean().nullish(),
+    disabled_shop_filters: z.array(z.string()).nullish(),
+    hero: z.int().gte(0).nullish(),
+    heroes: z.array(z.int().gte(0)).nullish(),
+    id: z.int().gte(0),
+    image: z.string().nullish(),
+    image_webp: z.string().nullish(),
+    imbue: zAbilityImbue.nullish(),
+    is_active_item: z.boolean(),
+    item_slot_type: zItemSlotType,
+    item_tier: z.int().gte(0),
+    name: z.string(),
+    properties: z.record(z.string(), zUpgradeProperty).nullish(),
+    shop_filters: z.array(z.string()).nullish(),
+    shop_image: z.string().nullish(),
+    shop_image_small: z.string().nullish(),
+    shop_image_small_webp: z.string().nullish(),
+    shop_image_webp: z.string().nullish(),
+    shop_version: z.int().nullish(),
+    shopable: z.boolean(),
+    start_trained: z.boolean().nullish(),
+    tooltip_sections: z.array(zUpgradeTooltipSection).nullish(),
+    type: zItemType,
+    update_time: z.int().nullish(),
+    upgrades: z.array(zRawAbilityUpgrade).nullish(),
+    weapon_info: zRawItemWeaponInfoInner.nullish()
+});
+
+export type upgradeZodType = z.infer<typeof zUpgrade>;
+
+export const zWeaponInfo = z.object({
+    aiming_shot_spread_penalty: z.unknown().optional(),
+    build_up_rate: z.number().nullish(),
+    bullet_damage: z.number().nullish(),
+    bullet_gravity_scale: z.number().nullish(),
+    bullet_handler_type: z.string().nullish(),
+    bullet_inherit_shooter_velocity_scale: z.number().nullish(),
+    bullet_lifetime: z.number().nullish(),
+    bullet_radius: z.number().nullish(),
+    bullet_radius_vs_world: z.number().nullish(),
+    bullet_reflect_amount: z.number().nullish(),
+    bullet_reflect_scale: z.number().nullish(),
+    bullet_speed: z.number().nullish(),
+    bullet_speed_curve: zRawItemWeaponInfoBulletSpeedCurve.nullish(),
+    bullet_whiz_distance: z.number().nullish(),
+    bullets: z.int().gte(0).nullish(),
+    bullets_per_second: z.number().nullish(),
+    bullets_per_second_with_reload: z.number().nullish(),
+    burst_shot_cooldown: z.number().nullish(),
+    burst_shot_count: z.int().gte(0).nullish(),
+    can_zoom: z.boolean().nullish(),
+    clip_size: z.int().gte(0).nullish(),
+    crit_bonus_against_npcs: z.number().nullish(),
+    crit_bonus_end: z.number().nullish(),
+    crit_bonus_end_range: z.number().nullish(),
+    crit_bonus_start: z.number().nullish(),
+    crit_bonus_start_range: z.number().nullish(),
+    cycle_time: z.number().nullish(),
+    damage_falloff_bias: z.number().nullish(),
+    damage_falloff_end_range: z.number().nullish(),
+    damage_falloff_end_scale: z.number().nullish(),
+    damage_falloff_start_range: z.number().nullish(),
+    damage_falloff_start_scale: z.number().nullish(),
+    damage_per_magazine: z.number().nullish(),
+    damage_per_second: z.number().nullish(),
+    damage_per_second_with_reload: z.number().nullish(),
+    damage_per_shot: z.number().nullish(),
+    horizontal_punch: z.number().nullish(),
+    horizontal_recoil: zRawWeaponInfoHorizontalRecoil.nullish(),
+    intra_burst_cycle_time: z.number().nullish(),
+    is_semi_auto: z.boolean().nullish(),
+    low_ammo_indicator_threshold: z.number().nullish(),
+    max_spin_cycle_time: z.number().nullish(),
+    range: z.number().nullish(),
+    recoil_recovery_delay_factor: z.number().nullish(),
+    recoil_recovery_speed: z.number().nullish(),
+    recoil_seed: z.number().nullish(),
+    recoil_shot_index_recovery_time_factor: z.number().nullish(),
+    recoil_speed: z.number().nullish(),
+    recycle_time: z.number().nullish(),
+    reload_duration: z.number().nullish(),
+    reload_move_speed: z.number().nullish(),
+    reload_single_bullets: z.boolean().nullish(),
+    reload_single_bullets_allow_cancel: z.boolean().nullish(),
+    reload_single_bullets_initial_delay: z.number().nullish(),
+    scatter_yaw_scale: z.number().nullish(),
+    semi_auto_cycle_rate: z.number().nullish(),
+    shoot_move_speed_percent: z.number().nullish(),
+    shoot_spread_penalty_decay: z.number().nullish(),
+    shoot_spread_penalty_decay_delay: z.number().nullish(),
+    shoot_spread_penalty_per_shot: z.number().nullish(),
+    shooting_up_spread_penalty: z.number().nullish(),
+    shots_per_second: z.number().nullish(),
+    shots_per_second_with_reload: z.number().nullish(),
+    spin_decay_rate: z.number().nullish(),
+    spin_increase_rate: z.number().nullish(),
+    spins_up: z.boolean().nullish(),
+    spread: z.number().nullish(),
+    standing_shot_spread_penalty: z.unknown().optional(),
+    standing_spread: z.number().nullish(),
+    vertical_punch: z.number().nullish(),
+    vertical_recoil: zRawWeaponInfoVerticalRecoil.nullish(),
+    zoom_fov: z.number().nullish(),
+    zoom_move_speed_percent: z.number().nullish()
+});
+
+export type weaponInfoZodType = z.infer<typeof zWeaponInfo>;
+
+export const zWeapon = z.object({
+    class_name: z.string(),
+    crosshair_css_class: z.string().nullish(),
+    custom_crosshair_settings: zRawCustomCrosshairSettings.nullish(),
+    hero: z.int().gte(0).nullish(),
+    heroes: z.array(z.int().gte(0)).nullish(),
+    id: z.int().gte(0),
+    image: z.string().nullish(),
+    image_webp: z.string().nullish(),
+    name: z.string(),
+    properties: z.record(z.string(), zItemProperty).nullish(),
+    start_trained: z.boolean().nullish(),
+    type: zItemType,
+    update_time: z.int().nullish(),
+    use_custom_crosshair_settings: z.boolean().nullish(),
+    weapon_info: zWeaponInfo.nullish()
+});
+
+export type weaponZodType = z.infer<typeof zWeapon>;
+
+export const zItem = z.union([
+    zAbility,
+    zWeapon,
+    zUpgrade
+]);
+
+export type itemZodType = z.infer<typeof zItem>;
 
 export const zListHeroesQuery = z.object({
     language: z.union([
@@ -464,6 +930,50 @@ export const zListHeroesQuery = z.object({
  */
 export const zListHeroesResponse = z.array(zHero);
 
+export const zGetItemsByTypePath = z.object({
+    type: zItemType
+});
+
+export const zGetItemsByTypeQuery = z.object({
+    language: z.union([
+        z.literal('brazilian'),
+        z.literal('bulgarian'),
+        z.literal('czech'),
+        z.literal('danish'),
+        z.literal('dutch'),
+        z.literal('english'),
+        z.literal('finnish'),
+        z.literal('french'),
+        z.literal('german'),
+        z.literal('greek'),
+        z.literal('hungarian'),
+        z.literal('indonesian'),
+        z.literal('italian'),
+        z.literal('japanese'),
+        z.literal('koreana'),
+        z.literal('latam'),
+        z.literal('norwegian'),
+        z.literal('polish'),
+        z.literal('portuguese'),
+        z.literal('romanian'),
+        z.literal('russian'),
+        z.literal('schinese'),
+        z.literal('spanish'),
+        z.literal('swedish'),
+        z.literal('tchinese'),
+        z.literal('thai'),
+        z.literal('turkish'),
+        z.literal('ukrainian'),
+        z.literal('vietnamese')
+    ]).nullish(),
+    client_version: z.int().gte(0).nullish()
+});
+
+/**
+ * OK
+ */
+export const zGetItemsByTypeResponse = z.array(zItem);
+
 export const zListRanksQuery = z.object({
     language: z.union([
         z.literal('brazilian'),
@@ -503,6 +1013,15 @@ export const zListRanksQuery = z.object({
  * OK
  */
 export const zListRanksResponse = z.array(zRank);
+
+export const zMetadataPath = z.object({
+    match_id: z.int().gte(0)
+});
+
+export const zMetadataQuery = z.object({
+    is_custom: z.boolean().nullish(),
+    disable_steam: z.boolean().nullish()
+});
 
 export const zSteamQuery = z.object({
     account_ids: z.array(z.int().gte(0)).min(1).max(1000),

@@ -3,7 +3,7 @@ import { type CacheStore, createAlmanac, noCache } from '@almanac/api-client';
 
 /** Next's data cache does not store a rejected callback. */
 const nextDataCache: CacheStore = {
-  getOrLoad: (key, policy, load) => unstable_cache(load, [key], { revalidate: policy.ttlSeconds })(),
+  getOrLoad: (key, policy, load) => unstable_cache(load, [key], { revalidate: policy.ttlSeconds ?? false })(),
 };
 
 export const almanac = createAlmanac({

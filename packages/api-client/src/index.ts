@@ -15,3 +15,5 @@ export type {
   Team,
   UnixSeconds,
 } from './domain';
+export { parseMatchId } from './match';
+export type { CurvePoint, ItemPurchase, ItemSummary, MatchDetail, MatchPlayer } from './match';

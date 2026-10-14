@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerMatchHistoryEntry } from '../src/generated/types.gen';
+import { parseMatchId } from '../src/match';
 import { type HeroId, joinHeroes, parseAccountId, parseHistory, resolveRank, toHeroIndex, toRankIndex } from '../src/domain';
 
 const REAL_ROW: PlayerMatchHistoryEntry = {
@@ -105,4 +106,17 @@ describe('parseAccountId', () => {
   ])('%j -> %j', (input, expected) => {
     expect(parseAccountId(input)).toBe(expected);
   });
+});
+
+describe('parseMatchId', () => {
+  it.each([
+    ['116413049', 116413049],
+    ['1', 1],
+    ['9007199254740991', 9007199254740991],
+    ['9007199254740992', null],
+    ['0', null],
+    ['01', null],
+    ['abc', null],
+    ['', null],
+  ])('%s -> %s', (input, expected) => expect(parseMatchId(input)).toBe(expected));
 });

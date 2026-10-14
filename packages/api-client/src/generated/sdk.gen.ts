@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses } from './types.gen';
-import { zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse } from './zod.gen';
+import type { GetItemsByTypeData, GetItemsByTypeResponses, ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, MetadataData, MetadataErrors, MetadataResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses } from './types.gen';
+import { zGetItemsByTypePath, zGetItemsByTypeQuery, zGetItemsByTypeResponse, zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zMetadataPath, zMetadataQuery, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -38,6 +38,20 @@ export const listHeroes = <ThrowOnError extends boolean = false>(options?: Optio
 });
 
 /**
+ * List Items By Type
+ */
+export const getItemsByType = <ThrowOnError extends boolean = false>(options: Options<GetItemsByTypeData, ThrowOnError>): RequestResult<GetItemsByTypeResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetItemsByTypeResponses, unknown, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetItemsByTypePath,
+        query: zGetItemsByTypeQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetItemsByTypeResponse.parseAsync(data),
+    url: '/v1/assets/items/by-type/{type}',
+    ...options
+});
+
+/**
  * List Ranks
  *
  * Returns the 12 player ranks (tier, localized name, badge image URLs, hex color).
@@ -50,6 +64,42 @@ export const listRanks = <ThrowOnError extends boolean = false>(options?: Option
     }).parseAsync(data),
     responseValidator: async (data) => await zListRanksResponse.parseAsync(data),
     url: '/v1/assets/ranks',
+    ...options
+});
+
+/**
+ * Metadata
+ *
+ *
+ * This endpoint returns the match metadata for the given `match_id` parsed into JSON.
+ *
+ * Each player object is enriched with a `hero_build_id` field (if available) from demo analysis.
+ *
+ * > **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
+ *
+ * `pregame_hero_ids` maps `account_id` to the hero the player had locked before the pre-game swap window (if available from demo analysis). A player swapped heroes when it differs from their `hero_id`.
+ *
+ * Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
+ *
+ * Relevant Protobuf Messages:
+ * - CMsgMatchMetaData
+ * - CMsgMatchMetaDataContents
+ *
+ * ### Rate Limits:
+ * | Type | Limit |
+ * | ---- | ----- |
+ * | IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 3req/h |
+ * | Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 300req/h |
+ * | Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 1500req/h |
+ *
+ */
+export const metadata = <ThrowOnError extends boolean = false>(options: Options<MetadataData, ThrowOnError>): RequestResult<MetadataResponses, MetadataErrors, ThrowOnError> => (options.client ?? client).get<MetadataResponses, MetadataErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zMetadataPath,
+        query: zMetadataQuery.optional()
+    }).parseAsync(data),
+    url: '/v1/matches/{match_id}/metadata',
     ...options
 });
 

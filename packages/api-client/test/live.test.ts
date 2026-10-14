@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createAlmanac, noCache } from '../src/almanac';
-import { type AccountId, parseAccountId } from '../src/domain';
+import { type AccountId, type MatchId, parseAccountId } from '../src/domain';
+import { parseMatchId } from '../src/match';
 
 describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => {
   it('parses the demo account end to end', async () => {
@@ -17,6 +18,19 @@ describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => 
     const [rank, persona] = await Promise.all([almanac.playerRank(me), almanac.steamPersona(me)]);
     expect(rank.ok && rank.value.kind === 'ranked' && rank.value.name).toEqual(expect.any(String));
     expect(persona).toEqual({ ok: true, value: { name: expect.any(String) } });
+  }, 30_000);
+
+  it('reads a demo match with every hero, item list and curve', async () => {
+    const almanac = createAlmanac({ cache: noCache, cacheNamespace: 'live' });
+    const result = await almanac.matchDetail(parseMatchId('116413049') as MatchId);
+    if (!result.ok || result.value === null) throw new Error(`expected a match, got ${JSON.stringify(result)}`);
+    expect(result.value.players).toHaveLength(12);
+    for (const p of result.value.players) {
+      expect(p.hero.kind).toBe('known');
+      expect(p.items?.length).toBeGreaterThan(0);
+      expect(p.curve.length).toBeGreaterThan(2);
+    }
+    expect(await almanac.matchDetail(parseMatchId('999999999') as MatchId)).toEqual({ ok: true, value: null });
   }, 30_000);
 
   it('answers an unknown account with an empty history', async () => {

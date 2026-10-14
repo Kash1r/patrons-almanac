@@ -1,10 +1,19 @@
 import { type Client, createClient } from './generated/client';
-import { listHeroes, listRanks, matchHistory as getMatchHistory, rank as getRank, steam } from './generated/sdk.gen';
+import {
+  getItemsByType,
+  listHeroes,
+  listRanks,
+  matchHistory as getMatchHistory,
+  metadata as getMetadata,
+  rank as getRank,
+  steam,
+} from './generated/sdk.gen';
 import type { PlayerMatchHistoryEntry, RankResponse } from './generated/types.gen';
 import { zMatchHistoryResponse } from './generated/zod.gen';
 import {
   type AccountId,
   type HeroIndex,
+  type MatchId,
   type PlayerMatch,
   type PlayerMatchRecord,
   type PlayerRank,
@@ -17,10 +26,12 @@ import {
   toRankIndex,
   toSteamPersona,
 } from './domain';
+import { type ItemIndex, type MatchDetail, type MatchRecord, joinMatch, toItemIndex, toMatchRecord, zMatchMetadata } from './match';
 
 export type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
 
-export type CachePolicy = { readonly ttlSeconds: number };
+/** `ttlSeconds: null` keeps the value until the cache namespace changes. */
+export type CachePolicy = { readonly ttlSeconds: number | null };
 
 /**
  * Contract for every adapter:
@@ -71,9 +82,22 @@ export interface Almanac {
   playerRank(accountId: AccountId): Promise<Result<PlayerRank>>;
   /** The Steam persona, or `null` when the API holds no Steam profile for the account. */
   steamPersona(accountId: AccountId): Promise<Result<SteamPersona | null>>;
+  /**
+   * A finished match with heroes, shop items and Steam names resolved, or `null` when the API holds
+   * no metadata for it. Failed hero, item or name lookups degrade those parts; they never fail the match.
+   */
+  matchDetail(matchId: MatchId): Promise<Result<MatchDetail | null>>;
 }
 
-type SourceName = 'hero-index' | 'match-history' | 'rank-index' | 'player-rank' | 'steam-persona';
+type SourceName =
+  | 'hero-index'
+  | 'match-history'
+  | 'rank-index'
+  | 'player-rank'
+  | 'steam-persona'
+  | 'item-index'
+  | 'match'
+  | 'match-names';
 
 const SOURCES = {
   'hero-index': { ttlSeconds: 24 * 60 * 60 },
@@ -81,6 +105,9 @@ const SOURCES = {
   'rank-index': { ttlSeconds: 24 * 60 * 60 },
   'player-rank': { ttlSeconds: 5 * 60 },
   'steam-persona': { ttlSeconds: 15 * 60 },
+  'item-index': { ttlSeconds: 24 * 60 * 60 },
+  match: { ttlSeconds: null },
+  'match-names': { ttlSeconds: 15 * 60 },
 } as const satisfies Record<SourceName, CachePolicy>;
 
 const BASE_URL = 'https://api.deadlock-api.com';
@@ -117,6 +144,24 @@ export function createAlmanac(options: AlmanacOptions): Almanac {
 
     steamPersona(accountId) {
       return readThrough(options, 'steam-persona', [accountId], () => loadSteamPersona(client, accountId));
+    },
+
+    async matchDetail(matchId) {
+      const [match, heroes, items] = await Promise.all([
+        readThrough(options, 'match', [matchId], () => loadMatch(client, matchId)),
+        readThrough(options, 'hero-index', [], () => loadHeroIndex(client)),
+        readThrough(options, 'item-index', [], () => loadItemIndex(client)),
+      ]);
+      if (!match.ok) {
+        return match.error.kind === 'upstream' && match.error.status === 404 ? { ok: true, value: null } : match;
+      }
+      const names = await readThrough(options, 'match-names', [matchId], () =>
+        loadNames(client, match.value.players.map((p) => p.accountId)),
+      );
+      return {
+        ok: true,
+        value: joinMatch(match.value, heroes.ok ? heroes.value : {}, items.ok ? items.value : null, names.ok ? names.value : {}),
+      };
     },
   };
 }
@@ -180,6 +225,42 @@ async function loadSteamPersona(client: Client, accountId: AccountId): Promise<S
   const outcome = await steam({ client, query: { account_ids: [accountId] }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (outcome.response?.status === 404) return null;
   return toSteamPersona(unwrap('steam-persona', outcome));
+}
+
+/**
+ * Steam fallback is off: without it an unknown match answers 404 at once; with it, 503 "recently failed"
+ * (measured), and the fallback's 3 requests per hour per IP would go to typos.
+ * A 404 rejects, so it is never stored, and the match can appear once the API ingests it.
+ */
+async function loadMatch(client: Client, matchId: MatchId): Promise<MatchRecord> {
+  const outcome = await getMetadata({
+    client,
+    path: { match_id: matchId },
+    query: { disable_steam: true },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  const parsed = zMatchMetadata.safeParse(unwrap('match', outcome));
+  const record = parsed.success ? toMatchRecord(parsed.data) : null;
+  if (record === null) {
+    console.error('[almanac] match: metadata failed validation', parsed.error?.message.slice(0, 2000) ?? 'unknown team code');
+    throw new UpstreamFailure({ kind: 'drift' });
+  }
+  return record;
+}
+
+async function loadItemIndex(client: Client): Promise<ItemIndex> {
+  return toItemIndex(
+    unwrap('item-index', await getItemsByType({ client, path: { type: 'upgrade' }, signal: AbortSignal.timeout(TIMEOUT_MS) })),
+  );
+}
+
+/** Account 0 is a bot or hidden player; asking for it 400s the whole batch. */
+async function loadNames(client: Client, accountIds: readonly AccountId[]): Promise<{ [accountId: string]: string }> {
+  const ids = accountIds.filter((id) => id > 0);
+  if (ids.length === 0) return {};
+  const outcome = await steam({ client, query: { account_ids: ids }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (outcome.response?.status === 404) return {};
+  return Object.fromEntries(unwrap('match-names', outcome).map((p) => [String(p.account_id), p.personaname]));
 }
 
 type SdkOutcome<T> = { readonly data: T | undefined; readonly error: unknown; readonly response?: Response };
