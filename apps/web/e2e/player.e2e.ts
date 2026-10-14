@@ -45,3 +45,32 @@ test('an account with no normal-mode matches shows the empty state', async ({ pa
   await expect(page.getByText('No normal-mode matches recorded for this account yet.')).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(0);
 });
+
+test('the mode tabs split the record, heroes and matches by ranked and unranked', async ({ page }) => {
+  await page.goto(DEMO);
+  const tabs = page.getByRole('navigation', { name: 'Match mode' });
+  await expect(tabs.getByRole('link', { name: 'All', exact: true })).toHaveAttribute('aria-current', 'page');
+  const record = page.getByRole('region', { name: 'Record' });
+  const total = Number((await record.textContent())?.match(/All ([\d,]+) recorded normal-mode matches/)?.[1]?.replace(/,/g, ''));
+
+  const counts: number[] = [];
+  for (const [label, scope] of [['Ranked', 'ranked'], ['Unranked', 'unranked']] as const) {
+    await tabs.getByRole('link', { name: label, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`\\?mode=${scope}$`));
+    await expect(tabs.getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+    const text = await record.textContent();
+    const count = Number(text?.match(new RegExp(`All ([\\d,]+) recorded ${scope} matches`))?.[1]?.replace(/,/g, ''));
+    expect(count).toBeGreaterThan(0);
+    counts.push(count);
+    const modes = page.getByRole('region', { name: 'Recent matches' }).getByRole('row').locator('td:nth-child(2)');
+    await expect(modes).toHaveCount(Math.min(20, count));
+    expect(new Set(await modes.allTextContents())).toEqual(new Set([label]));
+  }
+  expect(counts[0]! + counts[1]!).toBeLessThanOrEqual(total);
+});
+
+test('an unknown mode shows all matches', async ({ page }) => {
+  await page.goto(`${DEMO}?mode=bogus`);
+  await expect(page.getByRole('navigation', { name: 'Match mode' }).getByRole('link', { name: 'All' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('region', { name: 'Record' })).toContainText(/recorded normal-mode matches/);
+});

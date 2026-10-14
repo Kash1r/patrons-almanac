@@ -7,18 +7,18 @@ import { type Tally, isLowSample, kdaRatio, tally, topHeroes } from '@/lib/recor
 
 export const TOP_HERO_COUNT = 5;
 
-/** Win rate and KDA over every normal-mode match the API holds for the account. */
-export function PlayerRecord({ matches }: { matches: readonly PlayerMatch[] }) {
+/** Win rate and KDA over every match of `scope` the API holds for the account. */
+export function PlayerRecord({ matches, scope }: { matches: readonly PlayerMatch[]; scope: string }) {
   const t = tally(matches);
   const low = isLowSample(t.matches);
   return (
     <Card id="record" title="Record">
       {t.matches === 0 ? (
-        <p className="mt-2 type-body text-text-muted">No normal-mode matches to tally yet.</p>
+        <p className="mt-2 type-body text-text-muted">No {scope} matches to tally yet.</p>
       ) : (
         <>
           <p className="mt-1 type-body-small text-text-muted">
-            All <span className="type-table">{formatCount(t.matches)}</span> recorded normal-mode matches
+            All <span className="type-table">{formatCount(t.matches)}</span> recorded {scope} matches
           </p>
           <dl className="mt-4 grid gap-6 md:grid-cols-2">
             <StatBlock label="Win rate" lowSample={low} value={<WinRate wins={t.wins} matches={t.matches} />}>

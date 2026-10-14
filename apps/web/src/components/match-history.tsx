@@ -4,6 +4,7 @@ import type { HeroRef, PlayerMatch } from '@almanac/api-client';
 import { ApiArt } from '@/components/api-art';
 import { formatCount, formatUtcDate, formatDuration, formatKda } from '@/lib/format';
 import { RESULT_LABEL, TEAM_LABEL } from '@/lib/labels';
+import { MODE_LABEL } from '@/lib/mode-filter';
 
 export const SHOWN_MATCHES = 20;
 
@@ -25,6 +26,7 @@ const COLUMNS: readonly Column[] = [
       </Link>
     ),
   },
+  { header: 'Mode', align: 'start', cell: (m) => MODE_LABEL[m.mode] },
   { header: 'Hero', align: 'start', cell: (m) => <HeroCell hero={m.hero} /> },
   {
     header: 'Team',
@@ -44,13 +46,15 @@ const COLUMNS: readonly Column[] = [
 export interface MatchHistoryProps {
   readonly matches: readonly PlayerMatch[];
   readonly total: number;
+  /** Names the matches in copy: "normal-mode", "ranked", "unranked". */
+  readonly scope: string;
 }
 
-export function MatchHistory({ matches, total }: MatchHistoryProps) {
+export function MatchHistory({ matches, total, scope }: MatchHistoryProps) {
   if (matches.length === 0) {
     return (
       <HistoryCard>
-        <p className="mt-2 type-body text-text-muted">No normal-mode matches recorded for this account yet.</p>
+        <p className="mt-2 type-body text-text-muted">No {scope} matches recorded for this account yet.</p>
       </HistoryCard>
     );
   }
@@ -58,7 +62,7 @@ export function MatchHistory({ matches, total }: MatchHistoryProps) {
     <HistoryCard>
       <p className="mt-1 type-body-small text-text-muted">
         <span className="type-table">{formatCount(matches.length)}</span> of{' '}
-        <span className="type-table">{formatCount(total)}</span> normal-mode matches
+        <span className="type-table">{formatCount(total)}</span> {scope} matches
       </p>
       <MatchTable>
         {matches.map((m) => (
