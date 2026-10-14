@@ -47,12 +47,20 @@ docs/design/          brand-book.md, tokens.json
 - The API's OpenAPI spec is the source of truth. Regenerate the client rather than
   hand-writing response types. Confirm endpoint paths in the spec before using them.
 - Parse API responses at the boundary (the api-client package); trust types inside.
+- When the live API disagrees with the spec, add a patch with measured evidence to
+  `packages/api-client/openapi/patches.ts` and regenerate. Never edit generated code.
+  Where the spec has no response schema, validate only the fields used, as in
+  `packages/api-client/src/match.ts`.
 - Analytics endpoints share one rate limit: 200 requests/min per IP, 400 with a key.
   Never call the API from the browser. Go through the server and the cache.
 - Cache: assets daily; meta pages 1 hour; player and match pages 5 to 15 minutes;
   finished match metadata indefinitely.
 - Show "Data from deadlock-api.com. Not affiliated with Valve." in the footer.
   Use hero and item art only as the API's assets endpoints serve it.
+- Bulk data (Phase 2 on) comes from the hourly Parquet dumps listed in
+  https://data.deadlock-api.com/v1/manifest.json. `match_player` alone is about
+  540 GB, so jobs read only the columns and recent partitions they need, never
+  the whole table.
 
 ## Design
 
@@ -67,7 +75,7 @@ Parchment (light) is the alternate.
 | Route | Shows |
 | --- | --- |
 | `/` | Search, top heroes this week, patch banner |
-| `/player/[accountId]` | Rank, win rate, KDA, top heroes, last 20 matches |
+| `/player/[accountId]` | Rank, win rate, KDA, top heroes, last 20 matches; All, Ranked and Unranked tabs |
 | `/match/[matchId]` | Scoreboards, item timelines, souls and damage curves |
 | `/heroes`, `/heroes/[id]` | Tier list by rank; counters, synergies, builds |
 | `/items` | Item win and pick rates, net-worth adjusted |
@@ -92,7 +100,10 @@ Every stat shows its sample size; win rates under 50 matches are shown muted wit
 
 Phase 0 is done (2026-10-13). Live site: https://patrons-almanac.vercel.app/player/256939921
 
-Current phase: **Phase 1**.
+Phase 1 is done (2026-10-14): PRs #7 to #11. `/` has search only; top heroes this
+week and the patch banner move to Phase 2 with the hero meta.
+
+Current phase: **Phase 2**.
 
 ## Working style
 
