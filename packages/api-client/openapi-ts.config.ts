@@ -4,6 +4,9 @@ import { applySpecPatches } from './openapi/patches';
 const OPERATIONS = [
   'GET /v1/players/{account_id}/match-history',
   'GET /v1/assets/heroes',
+  'GET /v1/assets/ranks',
+  'GET /v1/players/{account_id}/rank',
+  'GET /v1/players/steam',
 ];
 
 export default defineConfig({
