@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import heroes from './fixtures/heroes.json';
 import history from './fixtures/match-history.json';
+import leaderboardBody from './fixtures/leaderboard.json';
 import matchMetadata from './fixtures/match-metadata.json';
 import upgrades from './fixtures/upgrades.json';
 import rank from './fixtures/rank.json';
@@ -23,6 +24,7 @@ const ROUTES = {
   '/v1/matches/116413049/metadata': 'match',
   '/v1/assets/items/by-type/upgrade': 'items',
   '/v1/players/steam-search': 'search',
+  '/v1/leaderboard/Europe': 'leaderboard',
 } as const;
 
 type Replies = Partial<Record<(typeof ROUTES)[keyof typeof ROUTES], Reply>>;
@@ -214,5 +216,30 @@ describe('searchPlayers', () => {
     const cache = recordingCache();
     await almanacWith({ search: { status: 200, body: [] } }, cache).searchPlayers(parseSearchQuery('Kash:ir X') as SearchQuery);
     expect(cache.stored).toEqual(['test:player-search:kash%3Air%20x']);
+  });
+});
+
+describe('leaderboard', () => {
+  it('orders by standing, keeps ties, links only a single named account, and resolves heroes', async () => {
+    const result = await almanacWith({ leaderboard: { status: 200, body: leaderboardBody }, heroes: { status: 200, body: heroes } }).leaderboard('Europe');
+    if (!result.ok) throw new Error('expected a leaderboard');
+    expect(result.value.map((r) => [r.position, r.accountId, r.possibleAccounts])).toEqual([
+      [1, null, 7],
+      [76, 1041489360, 1],
+      [104, null, 0],
+      [326, null, 9],
+      [326, null, 2],
+    ]);
+    expect(result.value[1]!.heroes.map((h) => h.id)).toEqual([8, 79, 67]);
+  });
+
+  it('keeps the rows when the hero index fails', async () => {
+    const result = await almanacWith({ leaderboard: { status: 200, body: leaderboardBody }, heroes: { status: 500, body: 'boom' } }).leaderboard('Europe');
+    expect(result.ok && result.value[1]!.heroes.map((h) => h.kind)).toEqual(['unknown', 'unknown', 'unknown']);
+  });
+
+  it('reports an upstream failure', async () => {
+    const result = await almanacWith({ leaderboard: { status: 500, body: 'boom' }, heroes: { status: 200, body: heroes } }).leaderboard('Europe');
+    expect(result).toEqual({ ok: false, error: { kind: 'upstream', status: 500 } });
   });
 });

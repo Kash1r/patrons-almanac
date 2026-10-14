@@ -1,6 +1,7 @@
 import { type Client, createClient } from './generated/client';
 import {
   getItemsByType,
+  leaderboard as getLeaderboard,
   listHeroes,
   listRanks,
   matchHistory as getMatchHistory,
@@ -30,6 +31,7 @@ import {
   toPlayerHits,
   toSteamPersona,
 } from './domain';
+import { type LeaderboardRecord, type LeaderboardRow, type Region, joinLeaderboard, toLeaderboard } from './leaderboard';
 import { type ItemIndex, type MatchDetail, type MatchRecord, joinMatch, toItemIndex, toMatchRecord, zMatchMetadata } from './match';
 
 export type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
@@ -93,6 +95,8 @@ export interface Almanac {
   matchDetail(matchId: MatchId): Promise<Result<MatchDetail | null>>;
   /** Steam profiles by name or account id, best match first; empty when none match. */
   searchPlayers(query: SearchQuery): Promise<Result<readonly PlayerHit[]>>;
+  /** The region's current ranked leaderboard in standing order, heroes resolved. */
+  leaderboard(region: Region): Promise<Result<readonly LeaderboardRow[]>>;
 }
 
 type SourceName =
@@ -104,7 +108,8 @@ type SourceName =
   | 'item-index'
   | 'match'
   | 'match-names'
-  | 'player-search';
+  | 'player-search'
+  | 'leaderboard';
 
 const SOURCES = {
   'hero-index': { ttlSeconds: 24 * 60 * 60 },
@@ -116,6 +121,7 @@ const SOURCES = {
   match: { ttlSeconds: null },
   'match-names': { ttlSeconds: 15 * 60 },
   'player-search': { ttlSeconds: 15 * 60 },
+  leaderboard: { ttlSeconds: 30 * 60 },
 } as const satisfies Record<SourceName, CachePolicy>;
 
 const BASE_URL = 'https://api.deadlock-api.com';
@@ -156,6 +162,15 @@ export function createAlmanac(options: AlmanacOptions): Almanac {
 
     searchPlayers(query) {
       return readThrough(options, 'player-search', [encodeURIComponent(query.toLowerCase())], () => loadSearch(client, query));
+    },
+
+    async leaderboard(region) {
+      const [board, heroes] = await Promise.all([
+        readThrough(options, 'leaderboard', [region], () => loadLeaderboard(client, region)),
+        readThrough(options, 'hero-index', [], () => loadHeroIndex(client)),
+      ]);
+      if (!board.ok) return board;
+      return { ok: true, value: joinLeaderboard(board.value, heroes.ok ? heroes.value : {}) };
     },
 
     async matchDetail(matchId) {
@@ -258,6 +273,11 @@ async function loadMatch(client: Client, matchId: MatchId): Promise<MatchRecord>
     throw new UpstreamFailure({ kind: 'drift' });
   }
   return record;
+}
+
+/** Valve refreshes the leaderboard hourly; the raw body is up to 0.5 MB, the stored rows about 80 KB. */
+async function loadLeaderboard(client: Client, region: Region): Promise<LeaderboardRecord[]> {
+  return toLeaderboard(unwrap('leaderboard', await getLeaderboard({ client, path: { region }, signal: AbortSignal.timeout(TIMEOUT_MS) })).entries);
 }
 
 export const SEARCH_LIMIT = 20;

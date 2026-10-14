@@ -374,6 +374,32 @@ export type LastRankedMatch = {
     start_time: number;
 };
 
+export type Leaderboard = {
+    /**
+     * The leaderboard entries.
+     */
+    entries: Array<LeaderboardEntry>;
+};
+
+export type LeaderboardEntry = {
+    /**
+     * The account name of the player.
+     */
+    account_name?: string | null;
+    /**
+     * The possible account IDs of the player. **CAVEAT: This is not always correct, as Steam account names are not unique.**
+     */
+    possible_account_ids?: Array<number>;
+    /**
+     * The rank of the player (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
+     */
+    rank?: number | null;
+    /**
+     * The top hero IDs of the player. See more: <https://api.deadlock-api.com/v1/assets/heroes>
+     */
+    top_hero_ids?: Array<number>;
+};
+
 export type PlayerMatchHistoryEntry = {
     abandoned_time_s?: number | null;
     account_id: number;
@@ -1045,6 +1071,44 @@ export type ListRanksResponses = {
 };
 
 export type ListRanksResponse = ListRanksResponses[keyof ListRanksResponses];
+
+export type LeaderboardData = {
+    body?: never;
+    path: {
+        /**
+         * The region to fetch the leaderboard for.
+         */
+        region: 'Europe' | 'Asia' | 'NAmerica' | 'SAmerica' | 'Oceania';
+    };
+    query?: {
+        /**
+         * Leaderboard to fetch, e.g. a ranked season's `leaderboard_id` from
+         * <https://api.deadlock-api.com/v1/assets/ranked-seasons>. Defaults to the current one.
+         */
+        leaderboard_id?: number;
+    };
+    url: '/v1/leaderboard/{region}';
+};
+
+export type LeaderboardErrors = {
+    /**
+     * Provided parameters are invalid.
+     */
+    400: unknown;
+    /**
+     * Fetching or parsing the leaderboard failed
+     */
+    500: unknown;
+};
+
+export type LeaderboardResponses = {
+    /**
+     * OK
+     */
+    200: Leaderboard;
+};
+
+export type LeaderboardResponse = LeaderboardResponses[keyof LeaderboardResponses];
 
 export type MetadataData = {
     body?: never;
