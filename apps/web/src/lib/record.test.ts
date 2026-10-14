@@ -5,7 +5,7 @@ import { isLowSample, kdaRatio, tally, topHeroes, winRate } from './record';
 const hero = (id: number): HeroRef => ({ kind: 'unknown', id: id as HeroId });
 
 const match = (heroId: number, result: PlayerMatch['result'], kills = 0, deaths = 0, assists = 0): PlayerMatch => ({
-  matchId: 1 as MatchId, startTime: 0 as UnixSeconds, durationS: 1800, hero: hero(heroId), team: 'amber', result,
+  matchId: 1 as MatchId, startTime: 0 as UnixSeconds, durationS: 1800, hero: hero(heroId), team: 'amber', result, mode: 'ranked',
   kills, deaths, assists, souls: 0, lastHits: 0, denies: 0, heroLevel: 1,
 });
 
