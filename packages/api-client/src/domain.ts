@@ -67,6 +67,15 @@ export type PlayerRank =
 
 export type SteamPersona = { readonly name: string };
 
+export type PlayerHit = {
+  readonly accountId: AccountId;
+  readonly name: string;
+  readonly matchesLast30d: number;
+};
+
+/** Trimmed, inner whitespace collapsed; `null` when nothing is left. */
+export type SearchQuery = Brand<string, 'SearchQuery'>;
+
 export type ParsedHistory = {
   readonly matches: readonly PlayerMatchRecord[];
   readonly unreadable: number;
@@ -166,6 +175,33 @@ export function resolveRank(index: RankIndex, response: RankResponse): PlayerRan
 export function toSteamPersona(profiles: readonly Pick<SteamProfile, 'personaname'>[]): SteamPersona | null {
   const profile = profiles[0];
   return profile === undefined ? null : { name: profile.personaname };
+}
+
+export function toPlayerHits(
+  profiles: readonly Pick<SteamProfile, 'account_id' | 'personaname' | 'matches_played_last_30d'>[],
+): PlayerHit[] {
+  return profiles.map((p) => ({ accountId: mintAccountId(p.account_id), name: p.personaname, matchesLast30d: p.matches_played_last_30d }));
+}
+
+export const MAX_SEARCH_LENGTH = 64;
+
+export function parseSearchQuery(input: string): SearchQuery | null {
+  const query = input.trim().replace(/\s+/g, ' ').slice(0, MAX_SEARCH_LENGTH).trim();
+  return query === '' ? null : (query as SearchQuery);
+}
+
+const STEAM_ID64_BASE = 76561197960265728n;
+const STEAM_ID64 = /^7656119\d{10}$/;
+const STEAM_PROFILE_URL = /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/profiles\/(7656119\d{10})\/?$/;
+
+/**
+ * The account a query names outright: a SteamID3, a SteamID64, or a steamcommunity.com/profiles/ URL.
+ * Search hides accounts with few recent matches, so these skip it.
+ */
+export function accountIdFromQuery(query: SearchQuery): AccountId | null {
+  const id64 = STEAM_PROFILE_URL.exec(query)?.[1] ?? STEAM_ID64.exec(query)?.[0];
+  if (id64 !== undefined) return parseAccountId(String(BigInt(id64) - STEAM_ID64_BASE));
+  return parseAccountId(query);
 }
 
 /** Accepts canonical decimal SteamID3 only: no sign, no leading zero, 1 to 2^32-1. */

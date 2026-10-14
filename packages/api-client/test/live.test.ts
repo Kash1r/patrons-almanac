@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAlmanac, noCache } from '../src/almanac';
-import { type AccountId, type MatchId, parseAccountId } from '../src/domain';
+import { type AccountId, type MatchId, type SearchQuery, parseAccountId, parseSearchQuery } from '../src/domain';
 import { parseMatchId } from '../src/match';
 
 describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => {
@@ -31,6 +31,12 @@ describe.runIf(process.env.ALMANAC_LIVE === '1')('live deadlock-api.com', () => 
       expect(p.curve.length).toBeGreaterThan(2);
     }
     expect(await almanac.matchDetail(parseMatchId('999999999') as MatchId)).toEqual({ ok: true, value: null });
+  }, 30_000);
+
+  it('finds the demo account by name', async () => {
+    const almanac = createAlmanac({ cache: noCache, cacheNamespace: 'live' });
+    const result = await almanac.searchPlayers(parseSearchQuery('Kashir') as SearchQuery);
+    expect(result.ok && result.value.map((h) => h.accountId)).toContain(256939921);
   }, 30_000);
 
   it('answers an unknown account with an empty history', async () => {

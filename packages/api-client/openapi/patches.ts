@@ -27,6 +27,14 @@ export const SPEC_PATCHES: readonly SpecPatch[] = [
       'so every response failed validation. Measured: 250 upgrades parse after the patch.',
     apply: allowNumericItemPropertyValue,
   },
+  {
+    id: 'numeric-defaults',
+    evidence:
+      'Six integer and number query parameters declare string defaults ("100", "5", "0", "0.02"), four of ' +
+      'them on /v1/players/steam-search. The generated zod schemas then call z.int().default("100"), which ' +
+      'does not typecheck. The defaults become the numbers they spell.',
+    apply: numberDefaults,
+  },
 ];
 
 export function applySpecPatches(spec: OpenApiDocument): void {
@@ -38,6 +46,20 @@ function allowNumericItemPropertyValue(spec: OpenApiDocument): number {
   if (typeof value !== 'object' || !Array.isArray(value.type) || value.type.includes('number')) return 0;
   value.type = [...value.type, 'number'];
   return 1;
+}
+
+function numberDefaults(node: unknown): number {
+  if (typeof node !== 'object' || node === null) return 0;
+  let changed = 0;
+  if ('default' in node && typeof node.default === 'string' && 'type' in node) {
+    const types: unknown[] = Array.isArray(node.type) ? node.type : [node.type];
+    if ((types.includes('integer') || types.includes('number')) && Number.isFinite(Number(node.default))) {
+      node.default = Number(node.default);
+      changed += 1;
+    }
+  }
+  for (const child of Object.values(node)) changed += numberDefaults(child);
+  return changed;
 }
 
 function dropIntegerFormats(node: unknown): number {

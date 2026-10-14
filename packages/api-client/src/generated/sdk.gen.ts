@@ -4,8 +4,8 @@ import * as z from 'zod';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetItemsByTypeData, GetItemsByTypeResponses, ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, MetadataData, MetadataErrors, MetadataResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses } from './types.gen';
-import { zGetItemsByTypePath, zGetItemsByTypeQuery, zGetItemsByTypeResponse, zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zMetadataPath, zMetadataQuery, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse } from './zod.gen';
+import type { GetItemsByTypeData, GetItemsByTypeResponses, ListHeroesData, ListHeroesErrors, ListHeroesResponses, ListRanksData, ListRanksErrors, ListRanksResponses, MatchHistoryData, MatchHistoryErrors, MatchHistoryResponses, MetadataData, MetadataErrors, MetadataResponses, RankData, RankErrors, RankResponses, SteamData, SteamErrors, SteamResponses, SteamSearchData, SteamSearchErrors, SteamSearchResponses } from './types.gen';
+import { zGetItemsByTypePath, zGetItemsByTypeQuery, zGetItemsByTypeResponse, zListHeroesQuery, zListHeroesResponse, zListRanksQuery, zListRanksResponse, zMatchHistoryPath, zMatchHistoryQuery, zMatchHistoryResponse, zMetadataPath, zMetadataQuery, zRankPath, zRankResponse2, zSteamQuery, zSteamResponse, zSteamSearchQuery, zSteamSearchResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -134,6 +134,33 @@ export const steam = <ThrowOnError extends boolean = false>(options: Options<Ste
     }).parseAsync(data),
     responseValidator: async (data) => await zSteamResponse.parseAsync(data),
     url: '/v1/players/steam',
+    ...options
+});
+
+/**
+ * Steam Profile Search
+ *
+ *
+ * This endpoint lets you search for Steam profiles by account_id or personaname.
+ *
+ * See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
+ *
+ * ### Rate Limits:
+ * | Type | Limit |
+ * | ---- | ----- |
+ * | IP | 100req/s |
+ * | Key | - |
+ * | Global | - |
+ *
+ */
+export const steamSearch = <ThrowOnError extends boolean = false>(options: Options<SteamSearchData, ThrowOnError>): RequestResult<SteamSearchResponses, SteamSearchErrors, ThrowOnError> => (options.client ?? client).get<SteamSearchResponses, SteamSearchErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zSteamSearchQuery
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSteamSearchResponse.parseAsync(data),
+    url: '/v1/players/steam-search',
     ...options
 });
 

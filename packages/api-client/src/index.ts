@@ -2,15 +2,17 @@ import 'server-only';
 
 export { createAlmanac, noCache } from './almanac';
 export type { Almanac, AlmanacError, AlmanacOptions, CachePolicy, CacheStore, Json, Result } from './almanac';
-export { parseAccountId } from './domain';
+export { accountIdFromQuery, MAX_SEARCH_LENGTH, parseAccountId, parseSearchQuery } from './domain';
 export type {
   AccountId,
   HeroId,
   HeroRef,
   MatchId,
   MatchResult,
+  PlayerHit,
   PlayerMatch,
   PlayerRank,
+  SearchQuery,
   SteamPersona,
   Team,
   UnixSeconds,
