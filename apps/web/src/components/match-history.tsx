@@ -1,19 +1,11 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
-import type { HeroRef, MatchResult, PlayerMatch, Team } from '@almanac/api-client';
+import type { HeroRef, PlayerMatch } from '@almanac/api-client';
 import { ApiArt } from '@/components/api-art';
 import { formatCount, formatUtcDate, formatDuration, formatKda } from '@/lib/format';
+import { RESULT_LABEL, TEAM_LABEL } from '@/lib/labels';
 
 export const SHOWN_MATCHES = 20;
-
-const RESULT_LABEL = {
-  win: { word: 'Win', className: 'text-win' },
-  loss: { word: 'Loss', className: 'text-loss' },
-} as const satisfies Record<MatchResult, { word: string; className: string }>;
-
-const TEAM_LABEL = {
-  amber: { name: 'The Amber Hand', className: 'text-team-amber' },
-  sapphire: { name: 'The Sapphire Flame', className: 'text-team-sapphire' },
-} as const satisfies Record<Team, { name: string; className: string }>;
 
 const ALIGN = { start: 'text-left', end: 'text-right' } as const;
 
@@ -27,7 +19,11 @@ const COLUMNS: readonly Column[] = [
   {
     header: 'Result',
     align: 'start',
-    cell: (m) => <span className={RESULT_LABEL[m.result].className}>{RESULT_LABEL[m.result].word}</span>,
+    cell: (m) => (
+      <Link href={`/match/${m.matchId}`} className={`underline decoration-brass underline-offset-4 ${RESULT_LABEL[m.result].className}`}>
+        {RESULT_LABEL[m.result].word}
+      </Link>
+    ),
   },
   { header: 'Hero', align: 'start', cell: (m) => <HeroCell hero={m.hero} /> },
   {

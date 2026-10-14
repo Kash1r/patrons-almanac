@@ -36,3 +36,9 @@ export function formatRatio(n: number): string {
 export function formatAverage(n: number): string {
   return AVERAGE.format(n);
 }
+
+const COMPACT = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+
+export function formatCompact(n: number): string {
+  return COMPACT.format(n);
+}

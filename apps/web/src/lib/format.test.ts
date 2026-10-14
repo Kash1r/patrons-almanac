@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { UnixSeconds } from '@almanac/api-client';
-import { formatAverage, formatCount, formatDuration, formatKda, formatPercent, formatRatio, formatUtcDate } from './format';
+import { formatAverage, formatCompact, formatCount, formatDuration, formatKda, formatPercent, formatRatio, formatUtcDate } from './format';
 
 it('formats counts with grouping', () => {
   expect(formatCount(37103)).toBe('37,103');
@@ -20,4 +20,9 @@ it('formats rates to one decimal place', () => {
 it('formats ratios to two decimals and averages to one', () => {
   expect(formatRatio(16381 / 3909)).toBe('4.19');
   expect(formatAverage(5552 / 883)).toBe('6.3');
+});
+it('formats axis values compactly', () => {
+  expect(formatCompact(0)).toBe('0');
+  expect(formatCompact(40000)).toBe('40K');
+  expect(formatCompact(158342)).toBe('158.3K');
 });

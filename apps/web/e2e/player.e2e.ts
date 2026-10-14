@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { notMono, numbersOn } from './numbers';
 
 const DEMO = '/player/256939921';
 
@@ -12,25 +13,9 @@ test('the demo profile lists 20 matches, each with its result in words', async (
 test('every number on the demo profile is set in a mono type style', async ({ page }) => {
   await page.goto(DEMO);
   await expect(page.getByRole('region', { name: 'Recent matches' }).getByRole('row')).toHaveCount(21);
-  const numbers = await page.evaluate(() => {
-    const MONO_STYLES = ['type-label', 'type-stat-xl', 'type-stat', 'type-table'];
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const found: { text: string; mono: boolean; family: string }[] = [];
-    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-      const parent = node.parentElement;
-      const text = node.textContent?.trim() ?? '';
-      if (parent === null || ['SCRIPT', 'STYLE'].includes(parent.tagName) || !/\d/.test(text)) continue;
-      const styled = parent.closest('[class*="type-"]');
-      found.push({
-        text,
-        mono: styled !== null && MONO_STYLES.some((style) => styled.classList.contains(style)),
-        family: getComputedStyle(parent).fontFamily,
-      });
-    }
-    return found;
-  });
+  const numbers = await numbersOn(page);
   expect(numbers.map((n) => n.text)).toContain('256939921');
-  expect(numbers.filter((n) => !n.mono || !n.family.includes('IBM Plex Mono'))).toEqual([]);
+  expect(numbers.filter(notMono)).toEqual([]);
 });
 
 test('the demo profile shows rank, record and top heroes, each rate with its sample', async ({ page }) => {
