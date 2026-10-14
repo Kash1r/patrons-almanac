@@ -61,7 +61,7 @@ function Scoreboard({ match, team }: { match: MatchDetail; team: Team }) {
         <span className={TEAM_LABEL[team].className}>{TEAM_LABEL[team].name}</span>{' '}
         <span className={`type-label uppercase ${result.className}`}>{result.word}</span>
       </h3>
-      <div className="-mx-4 mt-2 overflow-x-auto md:mx-0">
+      <div className="relative -mx-4 mt-2 overflow-x-auto md:mx-0">
         <table className="w-full whitespace-nowrap">
           <thead>
             <tr className="text-text-muted">
@@ -114,7 +114,7 @@ export function MatchCurves({ match }: { match: MatchDetail }) {
           <TeamChart id="hero-damage" title="Damage to heroes" points={curves.heroDamage} />
           <details className="mt-6">
             <summary className="cursor-pointer type-body-small text-text-muted">Show the samples as a table</summary>
-            <div className="-mx-4 mt-2 overflow-x-auto md:mx-0">
+            <div className="relative -mx-4 mt-2 overflow-x-auto md:mx-0">
               <table className="w-full whitespace-nowrap">
                 <thead>
                   <tr className="text-text-muted">
