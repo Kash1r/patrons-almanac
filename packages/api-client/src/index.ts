@@ -8,6 +8,7 @@ export type {
   HeroId,
   HeroRef,
   MatchId,
+  MatchMode,
   MatchResult,
   PlayerHit,
   PlayerMatch,

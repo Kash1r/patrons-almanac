@@ -27,7 +27,7 @@ describe('parseHistory', () => {
   it('maps a real row to a record', () => {
     expect(parseHistory([REAL_ROW])).toEqual({
       matches: [{
-        matchId: 115738165, startTime: 1791853191, durationS: 1876, heroId: 65, team: 'amber', result: 'win',
+        matchId: 115738165, startTime: 1791853191, durationS: 1876, heroId: 65, team: 'amber', result: 'win', mode: 'ranked',
         kills: 9, deaths: 4, assists: 7, souls: 37103, lastHits: 186, denies: 4, heroLevel: 32,
       }],
       unreadable: 0,
@@ -40,6 +40,15 @@ describe('parseHistory', () => {
       row({ match_id: 2, player_match_outcome: 0, player_team: 1, match_result: 0 }),
     ]);
     expect(matches.map((m) => [m.matchId, m.team, m.result])).toEqual([[1, 'sapphire', 'win'], [2, 'sapphire', 'loss']]);
+  });
+
+  it('reads match mode 4 as ranked, 1 as unranked, anything else as other', () => {
+    const { matches } = parseHistory([
+      row({ match_id: 1, start_time: 3, match_mode: 4 }),
+      row({ match_id: 2, start_time: 2, match_mode: 1 }),
+      row({ match_id: 3, start_time: 1, match_mode: 2 }),
+    ]);
+    expect(matches.map((m) => m.mode)).toEqual(['ranked', 'unranked', 'other']);
   });
 
   it('drops non-normal modes and counts unknown team codes', () => {

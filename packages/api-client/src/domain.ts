@@ -11,6 +11,9 @@ export type UnixSeconds = Brand<number, 'UnixSeconds'>;
 export type Team = 'amber' | 'sapphire';
 export type MatchResult = 'win' | 'loss';
 
+/** Private lobbies, bot games and the rest are `other`; they count only toward "all". */
+export type MatchMode = 'ranked' | 'unranked' | 'other';
+
 export type HeroSummary = {
   readonly kind: 'known';
   readonly id: HeroId;
@@ -29,6 +32,7 @@ export type PlayerMatchRecord = {
   readonly heroId: HeroId;
   readonly team: Team;
   readonly result: MatchResult;
+  readonly mode: MatchMode;
   readonly kills: number;
   readonly deaths: number;
   readonly assists: number;
@@ -85,6 +89,13 @@ const TEAM_BY_CODE: { readonly [code: number]: Team } = { 0: 'amber', 1: 'sapphi
 
 const NORMAL_GAME_MODE = 1;
 
+/**
+ * The spec types `match_mode` as a bare integer; the codes follow its `ActiveMatchMode` enum order.
+ * Measured on account 256939921: every code-4 row carries `ranked_delta` and none of the code-1 rows
+ * do, and the API's own `match_mode=ranked` and `unranked` filters return only code-4 and code-1 rows.
+ */
+const MODE_BY_CODE: { readonly [code: number]: MatchMode } = { 1: 'unranked', 4: 'ranked' };
+
 const MAX_ACCOUNT_ID = 4_294_967_295;
 
 /**
@@ -109,6 +120,7 @@ export function parseHistory(rows: readonly PlayerMatchHistoryEntry[]): ParsedHi
       heroId: mintHeroId(row.hero_id),
       team,
       result: team === winner ? 'win' : 'loss',
+      mode: MODE_BY_CODE[row.match_mode] ?? 'other',
       kills: row.player_kills,
       deaths: row.player_deaths,
       assists: row.player_assists,
