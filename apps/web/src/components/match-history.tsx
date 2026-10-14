@@ -130,7 +130,7 @@ function MatchTable({ children }: { children: ReactNode }) {
   );
 }
 
-function HeroCell({ hero }: { hero: HeroRef }) {
+export function HeroCell({ hero }: { hero: HeroRef }) {
   const iconUrl = hero.kind === 'known' ? hero.iconUrl : null;
   return (
     <span className="flex items-center gap-2">

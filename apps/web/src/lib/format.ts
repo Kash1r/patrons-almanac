@@ -20,3 +20,19 @@ export function formatUtcDate(time: UnixSeconds): string {
 export function formatKda({ kills, deaths, assists }: Pick<PlayerMatch, 'kills' | 'deaths' | 'assists'>): string {
   return `${kills} / ${deaths} / ${assists}`;
 }
+
+const PERCENT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const RATIO = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const AVERAGE = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+export function formatPercent(ratio: number): string {
+  return PERCENT.format(ratio);
+}
+
+export function formatRatio(n: number): string {
+  return RATIO.format(n);
+}
+
+export function formatAverage(n: number): string {
+  return AVERAGE.format(n);
+}

@@ -1,18 +1,13 @@
 import { MatchHistorySkeleton } from '@/components/match-history';
+import { PlayerHeaderSkeleton } from '@/components/player-header';
+import { PlayerRecordSkeleton } from '@/components/player-record';
 
 export default function Loading() {
   return (
     <main className="mx-auto max-w-5xl px-4 pt-12 pb-8 md:px-6">
-      <TitlePlaceholder />
+      <PlayerHeaderSkeleton />
+      <PlayerRecordSkeleton />
       <MatchHistorySkeleton />
     </main>
-  );
-}
-
-function TitlePlaceholder() {
-  return (
-    <p className="type-display-xl" aria-hidden="true">
-      &nbsp;
-    </p>
   );
 }

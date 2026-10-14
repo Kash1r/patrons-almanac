@@ -11,7 +11,7 @@ test('the demo profile lists 20 matches, each with its result in words', async (
 
 test('every number on the demo profile is set in a mono type style', async ({ page }) => {
   await page.goto(DEMO);
-  await expect(page.getByRole('row')).toHaveCount(21);
+  await expect(page.getByRole('region', { name: 'Recent matches' }).getByRole('row')).toHaveCount(21);
   const numbers = await page.evaluate(() => {
     const MONO_STYLES = ['type-label', 'type-stat-xl', 'type-stat', 'type-table'];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -31,6 +31,20 @@ test('every number on the demo profile is set in a mono type style', async ({ pa
   });
   expect(numbers.map((n) => n.text)).toContain('256939921');
   expect(numbers.filter((n) => !n.mono || !n.family.includes('IBM Plex Mono'))).toEqual([]);
+});
+
+test('the demo profile shows rank, record and top heroes, each rate with its sample', async ({ page }) => {
+  await page.goto(DEMO);
+  const rank = page.getByRole('region', { name: 'Rank' });
+  await expect(rank).toContainText(/^Rank\w+ \d/);
+  await expect(rank).toContainText(/After the ranked match of \d{4}-\d{2}-\d{2}/);
+  const record = page.getByRole('region', { name: 'Record' });
+  await expect(record).toContainText(/All [\d,]+ recorded normal-mode matches/);
+  await expect(record.getByRole('definition').first()).toHaveText(/^\d+\.\d%$/);
+  await expect(record).toContainText(/[\d,]+ wins, [\d,]+ losses/);
+  const heroes = page.getByRole('region', { name: 'Top heroes' });
+  await expect(heroes.getByRole('row')).toHaveCount(6);
+  await expect(heroes.getByRole('columnheader', { name: 'Matches' })).toBeVisible();
 });
 
 // Asserts the page, not the status: loading.tsx streams the shell before notFound() runs, so the status may be 200.
