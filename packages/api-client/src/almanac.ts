@@ -7,6 +7,7 @@ import {
   metadata as getMetadata,
   rank as getRank,
   steam,
+  steamSearch,
 } from './generated/sdk.gen';
 import type { PlayerMatchHistoryEntry, RankResponse } from './generated/types.gen';
 import { zMatchHistoryResponse } from './generated/zod.gen';
@@ -16,7 +17,9 @@ import {
   type MatchId,
   type PlayerMatch,
   type PlayerMatchRecord,
+  type PlayerHit,
   type PlayerRank,
+  type SearchQuery,
   type RankIndex,
   type SteamPersona,
   joinHeroes,
@@ -24,6 +27,7 @@ import {
   resolveRank,
   toHeroIndex,
   toRankIndex,
+  toPlayerHits,
   toSteamPersona,
 } from './domain';
 import { type ItemIndex, type MatchDetail, type MatchRecord, joinMatch, toItemIndex, toMatchRecord, zMatchMetadata } from './match';
@@ -87,6 +91,8 @@ export interface Almanac {
    * no metadata for it. Failed hero, item or name lookups degrade those parts; they never fail the match.
    */
   matchDetail(matchId: MatchId): Promise<Result<MatchDetail | null>>;
+  /** Steam profiles by name or account id, best match first; empty when none match. */
+  searchPlayers(query: SearchQuery): Promise<Result<readonly PlayerHit[]>>;
 }
 
 type SourceName =
@@ -97,7 +103,8 @@ type SourceName =
   | 'steam-persona'
   | 'item-index'
   | 'match'
-  | 'match-names';
+  | 'match-names'
+  | 'player-search';
 
 const SOURCES = {
   'hero-index': { ttlSeconds: 24 * 60 * 60 },
@@ -108,6 +115,7 @@ const SOURCES = {
   'item-index': { ttlSeconds: 24 * 60 * 60 },
   match: { ttlSeconds: null },
   'match-names': { ttlSeconds: 15 * 60 },
+  'player-search': { ttlSeconds: 15 * 60 },
 } as const satisfies Record<SourceName, CachePolicy>;
 
 const BASE_URL = 'https://api.deadlock-api.com';
@@ -144,6 +152,10 @@ export function createAlmanac(options: AlmanacOptions): Almanac {
 
     steamPersona(accountId) {
       return readThrough(options, 'steam-persona', [accountId], () => loadSteamPersona(client, accountId));
+    },
+
+    searchPlayers(query) {
+      return readThrough(options, 'player-search', [encodeURIComponent(query.toLowerCase())], () => loadSearch(client, query));
     },
 
     async matchDetail(matchId) {
@@ -246,6 +258,15 @@ async function loadMatch(client: Client, matchId: MatchId): Promise<MatchRecord>
     throw new UpstreamFailure({ kind: 'drift' });
   }
   return record;
+}
+
+export const SEARCH_LIMIT = 20;
+
+/** The API hides profiles with fewer than 5 matches in the last 30 days. 404 means none matched. */
+async function loadSearch(client: Client, query: SearchQuery): Promise<PlayerHit[]> {
+  const outcome = await steamSearch({ client, query: { search_query: query, limit: SEARCH_LIMIT }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (outcome.response?.status === 404) return [];
+  return toPlayerHits(unwrap('player-search', outcome));
 }
 
 async function loadItemIndex(client: Client): Promise<ItemIndex> {

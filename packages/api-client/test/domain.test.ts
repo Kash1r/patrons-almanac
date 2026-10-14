@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerMatchHistoryEntry } from '../src/generated/types.gen';
 import { parseMatchId } from '../src/match';
-import { type HeroId, joinHeroes, parseAccountId, parseHistory, resolveRank, toHeroIndex, toRankIndex } from '../src/domain';
+import {
+  type HeroId,
+  type SearchQuery,
+  accountIdFromQuery,
+  joinHeroes,
+  parseAccountId,
+  parseHistory,
+  parseSearchQuery,
+  resolveRank,
+  toHeroIndex,
+  toRankIndex,
+} from '../src/domain';
 
 const REAL_ROW: PlayerMatchHistoryEntry = {
   account_id: 256939921, match_id: 115738165, hero_id: 65, hero_level: 32, start_time: 1791853191,
@@ -119,4 +130,25 @@ describe('parseMatchId', () => {
     ['abc', null],
     ['', null],
   ])('%s -> %s', (input, expected) => expect(parseMatchId(input)).toBe(expected));
+});
+
+describe('search queries', () => {
+  it.each([
+    ['  Kashir  ', 'Kashir'],
+    ['two   words\there', 'two words here'],
+    ['   ', null],
+    ['x'.repeat(80), 'x'.repeat(64)],
+  ])('parses %j as %j', (input, expected) => expect(parseSearchQuery(input)).toBe(expected));
+
+  it.each([
+    ['256939921', 256939921],
+    ['76561198217205649', 256939921],
+    ['https://steamcommunity.com/profiles/76561198217205649/', 256939921],
+    ['steamcommunity.com/profiles/76561198217205649', 256939921],
+    ['https://steamcommunity.com/id/kashir', null],
+    ['Kashir', null],
+    ['01', null],
+  ])('reads %j as account %j', (input, expected) => {
+    expect(accountIdFromQuery(parseSearchQuery(input) as SearchQuery)).toBe(expected);
+  });
 });

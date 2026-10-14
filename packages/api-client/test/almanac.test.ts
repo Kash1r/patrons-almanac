@@ -7,7 +7,7 @@ import rank from './fixtures/rank.json';
 import ranks from './fixtures/ranks.json';
 import steamProfiles from './fixtures/steam.json';
 import { type CacheStore, createAlmanac, noCache } from '../src/almanac';
-import { type AccountId, type MatchId, parseAccountId } from '../src/domain';
+import { type AccountId, type MatchId, type SearchQuery, parseAccountId, parseSearchQuery } from '../src/domain';
 import { parseMatchId } from '../src/match';
 
 const ME = parseAccountId('256939921') as AccountId;
@@ -22,6 +22,7 @@ const ROUTES = {
   '/v1/players/steam': 'steam',
   '/v1/matches/116413049/metadata': 'match',
   '/v1/assets/items/by-type/upgrade': 'items',
+  '/v1/players/steam-search': 'search',
 } as const;
 
 type Replies = Partial<Record<(typeof ROUTES)[keyof typeof ROUTES], Reply>>;
@@ -193,5 +194,25 @@ describe('matchDetail', () => {
   it('reports a body without match_info as drift', async () => {
     const result = await almanacWith({ ...healthy, match: { status: 200, body: { status: 'weird' } } }).matchDetail(MATCH);
     expect(result).toEqual({ ok: false, error: { kind: 'drift' } });
+  });
+});
+
+describe('searchPlayers', () => {
+  const KASH = parseSearchQuery('Kashir') as SearchQuery;
+
+  it('returns hits best first', async () => {
+    const result = await almanacWith({ search: { status: 200, body: steamProfiles } }).searchPlayers(KASH);
+    expect(result).toEqual({ ok: true, value: [{ accountId: 256939921, name: 'Kashir', matchesLast30d: steamProfiles[0]!.matches_played_last_30d }] });
+  });
+
+  it('reads a 404 as no hits', async () => {
+    const result = await almanacWith({ search: { status: 404, body: { status: 404, error: 'No Steam profiles found.' } } }).searchPlayers(KASH);
+    expect(result).toEqual({ ok: true, value: [] });
+  });
+
+  it('keys the cache case-insensitively and escapes the query', async () => {
+    const cache = recordingCache();
+    await almanacWith({ search: { status: 200, body: [] } }, cache).searchPlayers(parseSearchQuery('Kash:ir X') as SearchQuery);
+    expect(cache.stored).toEqual(['test:player-search:kash%3Air%20x']);
   });
 });

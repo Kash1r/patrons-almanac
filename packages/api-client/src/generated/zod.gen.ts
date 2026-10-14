@@ -1033,6 +1033,19 @@ export const zSteamQuery = z.object({
  */
 export const zSteamResponse = z.array(zSteamProfile);
 
+export const zSteamSearchQuery = z.object({
+    search_query: z.string(),
+    limit: z.int().gte(1).lte(1000).nullish().default(100),
+    min_matches_played_last_30d: z.int().gte(0).nullish().default(5),
+    min_last_team_avg_badge: z.int().gte(0).nullish().default(0),
+    matches_played_weight: z.number().gte(0).nullish().default(0.02)
+});
+
+/**
+ * Steam Profile Search
+ */
+export const zSteamSearchResponse = z.array(zSteamProfile);
+
 export const zMatchHistoryPath = z.object({
     account_id: z.int().gte(0)
 });
