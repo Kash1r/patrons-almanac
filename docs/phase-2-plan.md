@@ -19,13 +19,15 @@ Prepared 2026-10-18. Numbers below were measured that day.
 - **Licence.** The dumps page links deadlock-api's MIT licence. Keep the footer credit;
   credit deadlock-api in the README and model cards.
 - **The pipeline's Parquet lives in GitHub Release assets** (decided 2026-10-18). One
-  release, tag `pipeline-data`, holds a file per day (`match_player-YYYY-MM-DD.parquet`),
-  the features file, and `state.json` with the last manifest watermark read. The nightly
-  workflow uploads with `gh release upload --clobber` (needs `contents: write`). Release
-  downloads redirect and then honour byte ranges (checked: `206` for a 100-byte range),
-  so DuckDB can query the files where they sit. Each file can be up to 2 GB; a day is
-  about 125 MB. Revisit R2 or Hugging Face if Phase 3 needs more history than that holds
-  comfortably.
+  release, tag `pipeline-data`, holds a file per finished UTC ingestion day
+  (`match_player-YYYY-MM-DD.parquet`), the features file, and `state.json`. The state
+  is `done_through`, the last ingestion day in the release. A day is the UTC date of a
+  row's `created_at`, when deadlock-api stored it. The nightly workflow uploads day files
+  first and `state.json` last, with `gh release upload --clobber` (needs
+  `contents: write`). Release downloads redirect and then honour byte ranges (checked:
+  `206` for a 100-byte range), so DuckDB can query the files where they sit. Each file
+  can be up to 2 GB; a day is about 215 MB (measured on 2026-10-17). Revisit R2 or
+  Hugging Face if Phase 3 needs more history than that holds comfortably.
 - **One tier list, all ranks combined** (decided 2026-10-18). No per-rank tier lists.
 - **"This week" means since the last patch while that patch is under 14 days old,
   otherwise the last 7 days** (decided 2026-10-18). The home page names the window it
@@ -56,16 +58,41 @@ The columns were the ones a win model needs: match id, start time, duration, mod
 both teams' average badge, winning team, team, hero, K/D/A, net worth, `won`,
 `stats.time_stamp_s`, `stats.net_worth`, `items.item_id`, `items.game_time_s`.
 
-So a nightly incremental read is cheap.
+That read covers the increments only. A finished day also needs the base parts; see
+"Measured 2026-10-18" below.
+
+## Measured 2026-10-18
+
+Reading the increments alone loses rows. These numbers shaped the ingest.
+
+- deadlock-api refolds each `match_id // 1,000,000` partition into its base part about
+  hourly. When deltas roll up into a residual, rows already folded are dropped from it.
+- Of the 2,174,178 unique `(match_id, player_slot)` keys stored on 2026-10-17, 883,754
+  (41%) are only in base parts.
+- Hourly deltas are kept about 31 hours. Older increments are day-long residuals, back
+  to 2026-10-05 in manifest 839.
+- Base row groups span weeks of `created_at`. One pass over 28 days reads 32.8 GB. Twenty-eight
+  passes, one per day, read 516 GB (from file footers).
+- One finished day reads about 3.6 GB over the network (base parts plus increments, kept
+  columns only).
+- The increments are not always contiguous. No residual or delta covers 2026-10-17
+  15:41 to 15:49 UTC. 85 of 120 base parts end before 15:49 (manifest 840), so rows
+  stored in that span may be missing. The ingest warns about such spans.
+- A live run of the ingest on 2026-10-18 wrote 2026-10-17 in 254 s from a home
+  connection: 1,862,964 rows, 156,151 matches, a 215 MB file.
 
 ## Pull requests, in order
 
 1. **Pipeline skeleton.** `pipeline/` as a uv project (Python 3.12, DuckDB pinned to
    1.5.x, pytest), and a Python job in `ci.yml`.
-2. **Ingest.** `nightly-pipeline.yml` on a cron reads every delta newer than the
-   last run's watermark (the manifest's `hi`), keeps normal-mode rows and the columns
-   above minus `account_id`, de-duplicates on `(match_id, player_slot)`, and writes
-   one Parquet file per day to the `pipeline-data` release, then updates `state.json`.
+2. **Ingest.** `nightly-pipeline.yml` on a cron writes one Parquet file per finished
+   UTC ingestion day to the `pipeline-data` release, then updates `state.json`
+   (`done_through`). For each new day it reads the base parts plus the residual and
+   delta files that overlap it, because residuals omit rows already folded into base
+   parts. It keeps normal-mode rows and 22 columns (the ones above plus
+   `match_outcome`, minus `account_id`), and keeps the newest copy per
+   `(match_id, player_slot)` within a day. The first run takes 28 days. A span that no
+   residual or delta covers, while some base part ends before it, prints a warning.
    Exits non-zero on any failure, so the gate means something.
 3. **Features.** A DuckDB step that builds one row per match: both teams' heroes,
    badges, souls at fixed minutes, and the result. This is Phase 3's input.

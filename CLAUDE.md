@@ -126,3 +126,4 @@ Current phase: **Phase 2**. Plan, decisions and measurements: `docs/phase-2-plan
   Set `E2E_BASE_URL` to test a deploy. Install the browser once with
   `pnpm --filter web exec playwright install chromium`.
 - Pipeline checks, from `pipeline/`: `uv sync`, `uv run ruff check`, `uv run ruff format --check`, `uv run pytest`
+- Ingest by hand, from `pipeline/`: `uv run python -m almanac_pipeline ingest --state in/state.json --out out`. Seeding `in/state.json` and reading the output: `pipeline/README.md`.
