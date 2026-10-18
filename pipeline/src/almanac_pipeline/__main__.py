@@ -1,5 +1,3 @@
-"""python -m almanac_pipeline ingest --state in/state.json --out out [--manifest URL_OR_PATH]"""
-
 from __future__ import annotations
 
 import argparse
@@ -20,15 +18,7 @@ def _utc(t: EpochSeconds) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Exit 0 on success, including "nothing new". Exit 1 on PipelineError with a ::error:: line.
-
-    Any other exception escapes with its traceback, and Python exits 1, so every failure turns
-    the job red.
-
-    Prints one line per day written, or why nothing was. An upstream stall or a hole in the
-    increments is not our failure, so each prints a ::warning:: annotation without failing the
-    job, and neither hides in a green run.
-    """
+    """An upstream stall or a hole in the increments is not our failure: each warns without failing."""
     parser = argparse.ArgumentParser(prog="python -m almanac_pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("ingest", help="write day files for newly finished days")

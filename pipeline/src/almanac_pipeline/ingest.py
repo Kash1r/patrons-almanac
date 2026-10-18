@@ -1,17 +1,6 @@
-"""Turn the match_player dump into one Parquet file per UTC ingestion day.
-
-The unit is the ingestion day: rows whose created_at (when deadlock-api stored them) falls on
-one UTC calendar day. That is the only day upstream can declare finished. watermark_hi >= the
-next midnight means no row of the day is still to come. So every day file is written once and
-is final.
-
-This module owns three decisions and nothing else repeats them:
-  - where a day starts and ends (`_day_bounds`),
-  - what a stored row is (`_COLUMNS`, `_KEEP`, newest copy per (match_id, player_slot)),
-  - how far the release has got (`State.done_through`).
-
-A run never talks to GitHub. It reads the prior state.json from a path and writes day files plus
-the next state.json into an empty directory; the workflow uploads that directory.
+"""One Parquet file per UTC ingestion day: the rows whose created_at (when deadlock-api stored them)
+falls on that day. It is the only day upstream can declare finished (watermark_hi >= the next
+midnight), so a day file is written once and is final.
 """
 
 from __future__ import annotations
@@ -29,7 +18,7 @@ from almanac_pipeline import PipelineError
 from almanac_pipeline.manifest import DumpFile, EpochSeconds, Snapshot, read_snapshot
 
 FIRST_RUN_DAYS = 28
-"""How much history a first run takes. 28 days is one remote pass of about 33 GB (measured)."""
+"""28 days is one remote pass of about 33 GB (measured)."""
 
 STATE_FILE = "state.json"
 _STATE_FORMAT = 1
@@ -70,7 +59,7 @@ def _day_file_name(day: date) -> str:
 
 
 def _day_bounds(day: date) -> tuple[EpochSeconds, EpochSeconds]:
-    """[start, end) of a UTC day. The planner's file choice and the SQL row filter both use this."""
+    """[start, end) of a UTC day."""
     start = int(datetime(day.year, day.month, day.day, tzinfo=UTC).timestamp())
     return EpochSeconds(start), EpochSeconds(start + _DAY)
 
@@ -81,19 +70,16 @@ def _day_of(t: EpochSeconds) -> date:
 
 @dataclass(frozen=True, slots=True)
 class State:
-    """The release's watermark, stored as state.json.
+    """Every UTC ingestion day <= done_through has its day file in the release, and it never moves back.
 
-    Every UTC ingestion day <= done_through has its day file in the release. It never moves back.
     A date, not the manifest's timestamp, so a published day file is always a whole day.
     """
 
     done_through: date
     manifest_version: int
-    """The manifest version the last run read. Informational, for the log."""
 
     @classmethod
     def load(cls, path: Path) -> State | None:
-        """None when the file does not exist (first run). Unreadable or unknown format raises PipelineError."""
         if not path.exists():
             return None
         try:
@@ -118,31 +104,21 @@ Gap = tuple[EpochSeconds, EpochSeconds]
 
 @dataclass(frozen=True, slots=True)
 class Plan:
-    """What one run does. Pure data, derived from (prior state, snapshot) by `plan`."""
-
     days: tuple[date, ...]
-    """Contiguous, ascending, every one finished upstream. Empty when nothing new has finished."""
+    """Contiguous and ascending."""
     files: tuple[DumpFile, ...]
-    """Every dump file that can hold a row stored on one of `days`. Empty when `days` is."""
     gaps: tuple[Gap, ...]
-    """Spans (after, up to] inside the planned days where rows may be in no file. Empty when `days` is."""
+    """Spans (after, up to] where rows may be in no file."""
     state: State
-    """state.json once these days are published. The prior state when `days` is empty."""
 
 
 def plan(prior: State | None, snapshot: Snapshot) -> Plan:
-    """Decide which days to write and which files to read. No I/O.
+    """Day D is finished iff watermark_hi >= end(D), so the last planned day is the one before
+    watermark_hi's day, midnight included.
 
-    last  = the UTC day before watermark_hi's day. Day D is finished iff watermark_hi >= end(D),
-            so this is the newest finished day, also when watermark_hi sits exactly on a midnight.
-    first = prior.done_through + 1, or last - (FIRST_RUN_DAYS - 1) on a first run.
-    days  = first..last. Nothing is planned when last <= prior.done_through (a rerun on the same
-            day, or a manifest older than the state), and the state is returned as it was.
-
-    Files: (lo, hi] overlaps [start(first), end(last)), i.e. lo < end and hi >= start. Base parts
-    (lo = 0) qualify whenever hi >= start. That is required, not an optimisation: rows already
+    Base parts (lo = 0) are read whenever hi >= start. That is required, not an optimisation: rows
     folded into a base part are gone from the increments (41% of 2026-10-17's rows lived only in
-    base parts, measured). No special case for folds, missed nights or a first run follows from it.
+    base parts, measured).
     """
     last = _day_of(snapshot.watermark_hi) - timedelta(days=1)
     if prior is not None and last <= prior.done_through:
@@ -155,11 +131,9 @@ def plan(prior: State | None, snapshot: Snapshot) -> Plan:
 
 
 def _gaps(files: Sequence[DumpFile], start: EpochSeconds, end: EpochSeconds) -> tuple[Gap, ...]:
-    """Spans of [start, end) that no increment covers and a base part cannot make up for.
+    """Spans no increment covers, where some base part ends before the span does.
 
-    A row is in a base part when created_at <= that part's hi, and in an increment when created_at
-    is in its (lo, hi]. An uncovered span loses rows of any partition whose base part ends before
-    the span does. When every base part reaches the span's end, nothing is missing.
+    A base part holds every row up to its hi, so a span it reaches loses nothing.
     """
     increments = sorted((f for f in files if f.lo > 0 and f.lo < end and f.hi >= start), key=lambda f: f.lo)
     base_his = [f.hi for f in files if f.lo == 0]
@@ -177,20 +151,14 @@ def _gaps(files: Sequence[DumpFile], start: EpochSeconds, end: EpochSeconds) -> 
 @dataclass(frozen=True, slots=True)
 class Report:
     written: tuple[tuple[date, int], ...]
-    """(day, rows) for each day file written, in day order."""
     state: State
     watermark_hi: EpochSeconds
     gaps: tuple[Gap, ...]
 
 
 def run(manifest: str, state_path: Path, out_dir: Path) -> Report:
-    """Write a day file for each newly finished day, then the next state.json, into out_dir.
-
-    Idempotent: the output depends only on the prior state and upstream, so a rerun after a crash
-    or a failed upload redoes the same days, and `--clobber` replaces what was half-published.
-    When no day has finished since the last run, nothing is written.
-    Raises PipelineError for bad input; DuckDB and network errors propagate. Either way the CLI
-    exits non-zero and out_dir holds no state.json, so the workflow publishes nothing.
+    """Idempotent: the output depends only on the prior state and upstream, so a rerun after a crash
+    or a failed upload redoes the same days.
     """
     if out_dir.exists() and any(out_dir.iterdir()):
         raise PipelineError(f"{out_dir} is not empty")
@@ -214,35 +182,30 @@ def run(manifest: str, state_path: Path, out_dir: Path) -> Report:
 
 
 def latest_rows(con: duckdb.DuckDBPyConnection, day_files: Sequence[str]) -> duckdb.DuckDBPyRelation:
-    """Rows from several day files, one per (match_id, player_slot): the copy with the newest created_at.
+    """Rows from several day files, one per (match_id, player_slot): the newest created_at wins.
 
-    The read side of the day-file contract. A match deadlock-api stored again on a later day sits in
-    both days' files; this is where that is resolved. Paths may be local or release URLs.
+    A match deadlock-api stored again on a later day sits in both days' files; this resolves it.
     """
-    # Inlined, not bound as a parameter: a bound relation runs the window over every column before a
-    # later .filter() or .project() applies (113 s against 0.1 s on one day file, measured).
+    # Inlined, not bound: a bound parameter runs the window over every column before a later
+    # .filter() or .project() applies (113 s against 0.1 s on one day file, measured).
     files = ", ".join("'" + f.replace("'", "''") + "'" for f in day_files)
     return con.sql(f"SELECT * FROM read_parquet([{files}]) {_NEWEST_PER_KEY}")
 
 
 def _connect(spill: Path) -> duckdb.DuckDBPyConnection:
-    """In-memory DuckDB tuned for a large streaming COPY on a 16 GB runner.
+    """preserve_insertion_order = false lets the partitioned COPY stream instead of buffering on a 16 GB runner.
 
-    preserve_insertion_order = false lets the partitioned COPY stream instead of buffering.
-    Spilling goes under the run's own temp directory, not the working directory.
-    No timestamps are ever fetched into Python: DuckDB needs pytz for that (measured), so all
-    time arithmetic stays in epoch seconds.
+    Never fetch timestamps into Python: DuckDB needs pytz for that (measured), so time arithmetic
+    stays in epoch seconds.
     """
     return duckdb.connect(config={"preserve_insertion_order": False, "temp_directory": spill.as_posix()})
 
 
 def _stage(con: duckdb.DuckDBPyConnection, the_plan: Plan, stage: Path) -> None:
-    """One remote pass for all planned days: kept rows, partitioned by day index, to local disk.
+    """One pass, not one per day: base row groups span weeks of created_at, so per-day reads re-fetch
+    them (28 per-day passes read 516 GB vs 32.8 GB in one, from file footers).
 
-    One pass, not one per day. Base row groups span weeks of created_at, so per-day reads re-fetch
-    them: a 28-day backfill reads 516 GB per day vs 32.8 GB in one pass (measured from footers).
-    Duplicates are left in; `_write_day` removes them. day_index i is days[i]: the same
-    86,400-second stride as _day_bounds, so there is no second definition of a UTC day.
+    day_index i is days[i], on the same 86,400 s stride as _day_bounds.
     """
     start = _day_bounds(the_plan.days[0])[0]
     end = _day_bounds(the_plan.days[-1])[1]
@@ -259,11 +222,8 @@ def _stage(con: duckdb.DuckDBPyConnection, the_plan: Plan, stage: Path) -> None:
 
 
 def _write_day(con: duckdb.DuckDBPyConnection, stage: Path, day_index: int, out: Path) -> int:
-    """Write one day file from the stage and return its row count.
-
-    Newest copy wins because a base part and a not-yet-rolled-up delta both hold recent rows, and
-    a key stored twice in one day differs in created_at (192 of 114,297 keys in partition 116, measured).
-    A day with no rows still gets a file with the full schema.
+    """Newest copy wins: a base part and a not-yet-rolled-up delta both hold recent rows, and a key
+    stored twice in one day differs in created_at (192 of 114,297 keys in partition 116, measured).
     """
     con.sql(
         f"""

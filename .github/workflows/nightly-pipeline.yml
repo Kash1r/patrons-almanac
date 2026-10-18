@@ -2,15 +2,13 @@ name: nightly-pipeline
 
 on:
   schedule:
-    # Day D is complete once the manifest's watermark passes D+1 00:00 UTC (about 01:10).
-    # 04:17 leaves margin and avoids the top-of-hour cron rush.
+    # Upstream's watermark passes midnight UTC at about 01:10; 04:17 leaves margin and dodges the top-of-hour rush.
     - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# The release is shared state. One writer at a time; a queued run sees the previous run's state.json.
 concurrency:
   group: nightly-pipeline
   cancel-in-progress: false
@@ -43,8 +41,7 @@ jobs:
             gh release create "$RELEASE" --latest=false --title "Pipeline data" \
               --notes "Nightly ingest of deadlock-api match_player dumps. See pipeline/README.md."
 
-      # A failed listing fails the step (errexit covers the assignment), so a missing
-      # state.json means first run only when no day file exists either.
+      # errexit covers the names assignment: a failed listing fails the step instead of looking like a first run.
       - name: Fetch the last state
         run: |
           mkdir -p in
@@ -69,7 +66,6 @@ jobs:
         run: df -h . /tmp
 
       # state.json goes last: a crash before it leaves the old watermark, and the next run redoes those days.
-      # With no newly finished day the ingest writes nothing, and the release stays as it is.
       - name: Publish day files, then the state
         run: |
           shopt -s nullglob

@@ -1,6 +1,3 @@
-"""Builders for a fake deadlock-api dump on local disk: Parquet files plus a manifest whose
-public_url is a local folder. The ingest reads them through the same code path as production."""
-
 from __future__ import annotations
 
 import json
@@ -12,7 +9,6 @@ import duckdb
 
 
 def ts(utc: str) -> int:
-    """'2026-10-17 05:00' or '2026-10-17 05:00:30', read as UTC, to epoch seconds."""
     return int(datetime.fromisoformat(utc).replace(tzinfo=UTC).timestamp())
 
 
@@ -57,8 +53,7 @@ _FIXED_VALUES = """
 
 
 def write_dump_file(path: Path, rows: tuple[DumpRow, ...]) -> None:
-    """Upstream's DuckDB types for every column the ingest reads, plus account_id and an unkept
-    column (last_hits), so tests can prove both are dropped. Fields a test does not vary are fixed."""
+    """account_id and last_hits are here so tests can prove the ingest drops them."""
     con = duckdb.connect()
     con.execute(f"CREATE TABLE t ({_SCHEMA})")
     for r in rows:
@@ -82,7 +77,6 @@ def write_dump_file(path: Path, rows: tuple[DumpRow, ...]) -> None:
 
 
 def write_dump(root: Path, files: list[FixtureFile], watermark_hi: str, version: int = 1) -> str:
-    """Write every file under root/v1/... and root/manifest.json. Returns the manifest path."""
     entries = []
     for f in files:
         key = f"v1/tables/match_player/g2/{f.kind}/{f.name}.parquet"
@@ -110,20 +104,17 @@ def write_dump(root: Path, files: list[FixtureFile], watermark_hi: str, version:
 
 
 def read_rows(path: Path, *columns: str) -> list[tuple]:
-    """Rows of a written day file, as tuples of the named SQL expressions, in file order.
-
-    Select timestamps as epoch(created_at): DuckDB needs pytz to hand a TIMESTAMPTZ to Python."""
+    """Select timestamps as epoch(created_at): DuckDB needs pytz to hand a TIMESTAMPTZ to Python."""
     return duckdb.connect().execute(f"SELECT {', '.join(columns)} FROM read_parquet(?)", [str(path)]).fetchall()
 
 
 def two_day_dump(root: Path) -> str:
-    """A dump shaped like the live one on 2026-10-18 at 03:53 UTC, covering the 16th and 17th.
+    """Shaped like the live dump on 2026-10-18 at 03:53 UTC, covering the 16th and 17th.
 
-    The residual and deltas chain as upstream's do. Base part 116 was refolded after the residual
-    was built, so row 1 now lives only in the base part. Row 2 sits in both a base part and a delta.
-    Row 6 was stored twice on the 17th. Row 10 was stored on the 16th and again on the 17th.
-    Row 12 was stored at exactly 00:00 on the 17th, and row 7 at exactly 00:00 on the 18th,
-    a day that has not finished.
+    Base part 116 was refolded after the residual was built, so row 1 lives only in the base part.
+    Row 2 sits in both a base part and a delta. Row 6 was stored twice on the 17th. Row 10 was
+    stored on the 16th and again on the 17th. Row 12 was stored at exactly 00:00 on the 17th, and
+    row 7 at exactly 00:00 on the 18th, a day that has not finished.
     """
     r = DumpRow
     return write_dump(

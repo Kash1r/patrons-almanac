@@ -1,5 +1,3 @@
-"""End to end over a fake dump on local disk: the same code path as production, minus the network."""
-
 import json
 from datetime import date
 

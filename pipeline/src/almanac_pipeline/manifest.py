@@ -1,10 +1,7 @@
-"""deadlock-api's dump manifest, parsed into the few facts the ingest needs.
-
-Upstream format (format_version 1, measured on version 838):
-  tables.match_player.files[] = {key, kind: base|residual|delta, lo?, hi, ...}
-  A base part holds every row of its match_id partition with created_at <= hi.
-  A residual or delta holds rows with created_at in (lo, hi].
-Nothing outside this module knows about kinds, keys, public_url or the JSON layout.
+"""Upstream format (format_version 1, measured on version 838):
+tables.match_player.files[] = {key, kind: base|residual|delta, lo?, hi, ...}
+A base part holds every row of its match_id partition with created_at <= hi.
+A residual or delta holds rows with created_at in (lo, hi].
 """
 
 from __future__ import annotations
@@ -23,16 +20,13 @@ MANIFEST_URL = "https://data.deadlock-api.com/v1/manifest.json"
 EpochSeconds = NewType("EpochSeconds", int)
 
 _KINDS = frozenset({"base", "residual", "delta"})
-# Segments cannot start with a dot, so no "..". All 185 keys in version 838 match.
+# No segment starts with a dot, so no "..". All 185 keys in version 838 match.
 _KEY = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*")
 
 
 @dataclass(frozen=True, slots=True)
 class DumpFile:
-    """One Parquet file of match_player, holding only rows with lo < created_at <= hi.
-
-    A base part has lo = 0: it covers everything stored up to hi. An increment has lo > 0.
-    """
+    """Rows with lo < created_at <= hi. lo = 0 marks a base part; an increment has lo > 0."""
 
     url: str
     lo: EpochSeconds
@@ -41,8 +35,6 @@ class DumpFile:
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:
-    """The match_player table as one manifest version describes it."""
-
     version: int
     watermark_hi: EpochSeconds
     """Every row with created_at <= watermark_hi is in `files`."""
@@ -50,13 +42,8 @@ class Snapshot:
 
 
 def read_snapshot(location: str) -> Snapshot:
-    """Fetch and parse the manifest at a URL or local path.
-
-    Fetches through DuckDB's read_text, so tests pass a local file and production uses the
-    same httpfs stack as the Parquet reads. Python's urllib with its default User-Agent gets
-    403 from data.deadlock-api.com (measured 2026-10-18).
-
-    Raises PipelineError when the manifest breaks an assumption the ingest relies on.
+    """Fetched through DuckDB's read_text: Python's urllib with its default User-Agent gets 403
+    from data.deadlock-api.com (measured 2026-10-18).
     """
     with duckdb.connect() as con:
         text = con.execute("SELECT content FROM read_text(?)", [location]).fetchone()[0]
