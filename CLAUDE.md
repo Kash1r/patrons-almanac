@@ -125,3 +125,4 @@ Current phase: **Phase 2**. Plan, decisions and measurements: `docs/phase-2-plan
 - E2E: `pnpm --filter web e2e`. It builds and starts the app unless one already runs on port 3000.
   Set `E2E_BASE_URL` to test a deploy. Install the browser once with
   `pnpm --filter web exec playwright install chromium`.
+- Pipeline checks, from `pipeline/`: `uv sync`, `uv run ruff check`, `uv run ruff format --check`, `uv run pytest`
