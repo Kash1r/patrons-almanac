@@ -24,3 +24,21 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Install Chromium for e2e
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      # The suite reads the live deadlock-api.com through the built app, so an API outage fails it.
+      - name: E2E against the production build
+        run: |
+          pnpm --filter web start > next.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000 && break; sleep 1; done
+          pnpm --filter web e2e
+      - name: Keep the Playwright report and server log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            next.log
+          retention-days: 7
