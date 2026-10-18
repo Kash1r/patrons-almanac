@@ -1,0 +1,84 @@
+name: nightly-pipeline
+
+on:
+  schedule:
+    # Day D is complete once the manifest's watermark passes D+1 00:00 UTC (about 01:10).
+    # 04:17 leaves margin and avoids the top-of-hour cron rush.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# The release is shared state. One writer at a time; a queued run sees the previous run's state.json.
+concurrency:
+  group: nightly-pipeline
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE: pipeline-data
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # setup-uv publishes no moving major tag, so pin the release commit
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+
+      - name: Make sure the release exists
+        run: |
+          gh release view "$RELEASE" > /dev/null 2>&1 ||
+            gh release create "$RELEASE" --latest=false --title "Pipeline data" \
+              --notes "Nightly ingest of deadlock-api match_player dumps. See pipeline/README.md."
+
+      # A failed listing fails the step (errexit covers the assignment), so a missing
+      # state.json means first run only when no day file exists either.
+      - name: Fetch the last state
+        run: |
+          mkdir -p in
+          names="$(gh release view "$RELEASE" --json assets --jq '.assets[].name')"
+          if grep -qx state.json <<< "$names"; then
+            gh release download "$RELEASE" --pattern state.json --dir in
+          elif grep -q '^match_player-.*\.parquet$' <<< "$names"; then
+            echo "::error::The release has day files but no state.json. A first run would overwrite them. Upload the right state.json, or delete the day files to start over."
+            exit 1
+          fi
+
+      - name: Log disk and memory before the ingest
+        run: |
+          df -h . /tmp
+          free -h
+
+      - name: Ingest finished days
+        run: uv run python -m almanac_pipeline ingest --state in/state.json --out out
+
+      - name: Log disk after the ingest
+        if: always()
+        run: df -h . /tmp
+
+      # state.json goes last: a crash before it leaves the old watermark, and the next run redoes those days.
+      # With no newly finished day the ingest writes nothing, and the release stays as it is.
+      - name: Publish day files, then the state
+        run: |
+          shopt -s nullglob
+          days=(out/*.parquet)
+          if (( ${#days[@]} )); then
+            gh release upload "$RELEASE" "${days[@]}" --clobber
+          fi
+          if [ -f out/state.json ]; then
+            gh release upload "$RELEASE" out/state.json --clobber
+          else
+            echo "Nothing to publish."
+          fi
