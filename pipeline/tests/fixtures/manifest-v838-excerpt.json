@@ -1,0 +1,106 @@
+{
+  "format_version": 1,
+  "version": 838,
+  "generated_at": "2026-10-18T19:10:40.260493439Z",
+  "public_url": "https://data.deadlock-api.com",
+  "duckdb_version": "v1.5.6",
+  "last_fold_at": "2026-10-18T12:36:12.275567793Z",
+  "catalog": "v1/catalog/838.ducklake",
+  "tables": {
+    "match_player": {
+      "policy": "incremental",
+      "status": "ready",
+      "watermark": "created_at",
+      "partition_expr": "intDiv(match_id, 1000000)",
+      "generation": 2,
+      "watermark_hi": 1792349580,
+      "columns": [
+        {
+          "name": "match_id",
+          "type": "UInt64"
+        },
+        {
+          "name": "game_mode",
+          "type": "Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6)"
+        },
+        {
+          "name": "account_id",
+          "type": "UInt32",
+          "comment": "steam id3"
+        },
+        {
+          "name": "player_slot",
+          "type": "UInt32"
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        }
+      ],
+      "files": [
+        {
+          "key": "v1/tables/match_player/g2/base/part-11/20261018T042300Z-10620e56275a.parquet",
+          "kind": "base",
+          "generation": 2,
+          "partition": 11,
+          "hi": 1792297380,
+          "rows": 19305,
+          "bytes": 27808395,
+          "built_at": "2026-10-18T04:33:29.853033618Z"
+        },
+        {
+          "key": "v1/tables/match_player/g2/base/part-116/20261018T175300Z-6a7f8a5873b7.parquet",
+          "kind": "base",
+          "generation": 2,
+          "partition": 116,
+          "hi": 1792345980,
+          "rows": 1783240,
+          "bytes": 2806040087,
+          "built_at": "2026-10-18T18:06:01.865161018Z"
+        },
+        {
+          "key": "v1/tables/match_player/g2/residual/20261006T092000Z-20261007T055300Z-591d0bb4b533.parquet",
+          "kind": "residual",
+          "generation": 2,
+          "lo": 1791278400,
+          "hi": 1791352380,
+          "rows": 30404,
+          "bytes": 50651801,
+          "built_at": "2026-10-08T06:47:40.124682759Z",
+          "rows_by_partition": {
+            "0": 2,
+            "1": 16
+          }
+        },
+        {
+          "key": "v1/tables/match_player/g2/delta/20261018T165300Z-20261018T175300Z-6a7f8a5873b7.parquet",
+          "kind": "delta",
+          "generation": 2,
+          "lo": 1792342380,
+          "hi": 1792345980,
+          "rows": 121023,
+          "bytes": 191067729,
+          "built_at": "2026-10-18T18:03:49.705848631Z",
+          "rows_by_partition": {
+            "7": 24,
+            "24": 156
+          }
+        },
+        {
+          "key": "v1/tables/match_player/g2/delta/20261018T175300Z-20261018T185300Z-5b633ba1806d.parquet",
+          "kind": "delta",
+          "generation": 2,
+          "lo": 1792345980,
+          "hi": 1792349580,
+          "rows": 127286,
+          "bytes": 200958179,
+          "built_at": "2026-10-18T19:03:47.286632080Z",
+          "rows_by_partition": {
+            "1": 2,
+            "39": 108
+          }
+        }
+      ]
+    }
+  }
+}
