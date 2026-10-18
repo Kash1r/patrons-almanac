@@ -18,6 +18,18 @@ Prepared 2026-10-18. Numbers below were measured that day.
   keeps match and hero data and drops `account_id`, names and Steam profiles.
 - **Licence.** The dumps page links deadlock-api's MIT licence. Keep the footer credit;
   credit deadlock-api in the README and model cards.
+- **The pipeline's Parquet lives in GitHub Release assets** (decided 2026-10-18). One
+  release, tag `pipeline-data`, holds a file per day (`match_player-YYYY-MM-DD.parquet`),
+  the features file, and `state.json` with the last manifest watermark read. The nightly
+  workflow uploads with `gh release upload --clobber` (needs `contents: write`). Release
+  downloads redirect and then honour byte ranges (checked: `206` for a 100-byte range),
+  so DuckDB can query the files where they sit. Each file can be up to 2 GB; a day is
+  about 125 MB. Revisit R2 or Hugging Face if Phase 3 needs more history than that holds
+  comfortably.
+- **One tier list, all ranks combined** (decided 2026-10-18). No per-rank tier lists.
+- **"This week" means since the last patch while that patch is under 14 days old,
+  otherwise the last 7 days** (decided 2026-10-18). The home page names the window it
+  used.
 
 ## What the dumps look like
 
@@ -44,7 +56,7 @@ The columns were the ones a win model needs: match id, start time, duration, mod
 both teams' average badge, winning team, team, hero, K/D/A, net worth, `won`,
 `stats.time_stamp_s`, `stats.net_worth`, `items.item_id`, `items.game_time_s`.
 
-So a nightly incremental read is cheap. What needs a decision is where the output lives.
+So a nightly incremental read is cheap.
 
 ## Pull requests, in order
 
@@ -53,27 +65,15 @@ So a nightly incremental read is cheap. What needs a decision is where the outpu
 2. **Ingest.** `nightly-pipeline.yml` on a cron reads every delta newer than the
    last run's watermark (the manifest's `hi`), keeps normal-mode rows and the columns
    above minus `account_id`, de-duplicates on `(match_id, player_slot)`, and writes
-   date-partitioned Parquet to the chosen store. Exits non-zero on any failure, so the
-   gate means something.
+   one Parquet file per day to the `pipeline-data` release, then updates `state.json`.
+   Exits non-zero on any failure, so the gate means something.
 3. **Features.** A DuckDB step that builds one row per match: both teams' heroes,
    badges, souls at fixed minutes, and the result. This is Phase 3's input.
-4. **Hero meta.** `/heroes` tier list by badge range from `/v1/analytics/hero-stats`;
+4. **Hero meta.** `/heroes` tier list over all ranks from `/v1/analytics/hero-stats`;
    `/heroes/[id]` with counters, synergies and builds from `hero-counter-stats`,
    `hero-synergy-stats` and `hero-build-stats/{hero_id}`.
 5. **Item meta.** `/items` from `/v1/analytics/item-stats`, bucketed by net worth.
-6. **Home page.** Top heroes this week, and a patch banner from `/v1/patches`.
+6. **Home page.** Top heroes this week (window as decided above), and a patch banner
+   from `/v1/patches`.
 
 Every endpoint above is in the committed spec; confirm parameters there before use.
-
-## Open questions for Kashir
-
-1. **Where the pipeline's Parquet lives.** The repo is public, so all three are free:
-   - GitHub Release assets: simplest, 2 GB per file, versioned by tag.
-   - Cloudflare R2: 10 GB free, S3 API, DuckDB reads it directly; needs an account.
-   - A Hugging Face dataset: free, public, made for this; needs an account.
-   At 125 MB a day, 30 days is about 4 GB. Recommendation: Release assets until
-   Phase 3 shows how much history the model needs.
-2. **Tier-list ranks.** Which badge ranges get their own tier list? Recommendation:
-   all ranks, plus Oracle and above, plus Eternus.
-3. **"This week".** A rolling 7 days, or since the last patch? Recommendation: since the
-   last patch when it is under 14 days old, else 7 days.

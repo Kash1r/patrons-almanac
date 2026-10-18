@@ -103,7 +103,7 @@ Phase 0 is done (2026-10-13). Live site: https://patrons-almanac.vercel.app/play
 Phase 1 is done (2026-10-14): PRs #7 to #11. `/` has search only; top heroes this
 week and the patch banner move to Phase 2 with the hero meta.
 
-Current phase: **Phase 2**. Plan, measurements and open questions: `docs/phase-2-plan.md`.
+Current phase: **Phase 2**. Plan, decisions and measurements: `docs/phase-2-plan.md`.
 
 ## Working style
 
