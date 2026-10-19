@@ -54,7 +54,8 @@ uv run python -m almanac_pipeline ingest --state in/state.json --out out
 ```
 
 - `--state` is the release's `state.json`. A missing file means first run, which
-  ingests the last 28 complete days.
+  ingests the newest complete day. A run ingests at most 7 days, oldest first, so after a
+  longer outage the next runs finish the backlog. Deeper history needs a separate job.
 - `--out` must be empty or absent. The job writes the new day files and the new
   `state.json` there. It never touches the release itself. The workflow uploads
   `out/` afterwards, day files first and `state.json` last.
@@ -70,9 +71,9 @@ hourly or daily file covers while some base part ends before it, so rows stored
 then may be missing from the day files. The warning names the UTC span. Gaps are
 not stored in `state.json`.
 
-To try it against live data without a long backfill, seed a state with
-`done_through` set to the day before yesterday (UTC). That leaves yesterday as the
-one day to ingest, about 3.6 GB of remote reads. From `pipeline/`:
+To try it against live data, run it with no state file. It ingests the newest finished
+day, usually yesterday (UTC), about 3.6 GB of remote reads. To start from an earlier day, seed a state with
+`done_through` set to the day before it. From `pipeline/`:
 
 ```sh
 mkdir -p in && echo '{"format": 1, "done_through": "2026-10-16", "manifest_version": 0}' > in/state.json
@@ -87,5 +88,5 @@ to the part's `hi`. **Increments** are hourly deltas and day-long residuals,
 holding rows stored in `(lo, hi]`. deadlock-api refolds base parts about hourly.
 When deltas roll up into a residual, rows already folded into a base part are
 dropped from the increment. So a day's rows are spread over both kinds, and the
-job reads both. It filters on `created_at`, and Parquet row-group statistics skip
-the rest.
+job reads both. For each day it reads only the files that overlap that day in one
+remote pass, filters on `created_at`, and Parquet row-group statistics skip the rest.

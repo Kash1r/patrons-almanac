@@ -17,8 +17,19 @@ import duckdb
 from almanac_pipeline import PipelineError
 from almanac_pipeline.manifest import DumpFile, EpochSeconds, Snapshot, read_snapshot
 
-FIRST_RUN_DAYS = 28
-"""28 days is one remote pass of about 33 GB (measured)."""
+# A deep backfill does not belong in the nightly. Base row groups span weeks of created_at, so each
+# one-day pass re-reads them (28 one-day passes read 516 GB against about 33 GB for one pass, from
+# file footers).
+FIRST_RUN_DAYS = 1
+MAX_DAYS_PER_RUN = 7
+
+# The remote read waits on request latency. On the 4-core, 16 GB runner, staging one day took 37 s at
+# 256 threads, 176 s at 64, and over 10 min at DuckDB's default of 4. Multi-day passes at 128 threads
+# or more starved the runner (RSS near 15 GB). These settings are the ones measured for a 7-day
+# catch-up with a fresh connection per day: 839 s, 10.9 GB peak.
+_REMOTE_THREADS = 64
+_LOCAL_THREADS = 4
+_STAGE_ROW_GROUP_SIZE = 8192
 
 STATE_FILE = "state.json"
 _STATE_FORMAT = 1
@@ -113,8 +124,9 @@ class Plan:
 
 
 def plan(prior: State | None, snapshot: Snapshot) -> Plan:
-    """Day D is finished iff watermark_hi >= end(D), so the last planned day is the one before
-    watermark_hi's day, midnight included.
+    """Day D is finished iff watermark_hi >= end(D), so the last finished day is the one before
+    watermark_hi's day, midnight included. A run plans at most MAX_DAYS_PER_RUN days, oldest first,
+    and a longer backlog takes several runs.
 
     Base parts (lo = 0) are read whenever hi >= start. That is required, not an optimisation: rows
     folded into a base part are gone from the increments (41% of 2026-10-17's rows lived only in
@@ -124,10 +136,15 @@ def plan(prior: State | None, snapshot: Snapshot) -> Plan:
     if prior is not None and last <= prior.done_through:
         return Plan(days=(), files=(), gaps=(), state=prior)
     first = prior.done_through + timedelta(days=1) if prior else last - timedelta(days=FIRST_RUN_DAYS - 1)
+    last = min(last, first + timedelta(days=MAX_DAYS_PER_RUN - 1))
     days = tuple(first + timedelta(days=i) for i in range((last - first).days + 1))
     start, end = _day_bounds(first)[0], _day_bounds(last)[1]
-    files = tuple(f for f in snapshot.files if f.lo < end and f.hi >= start)
+    files = _overlapping(snapshot.files, start, end)
     return Plan(days, files, _gaps(snapshot.files, start, end), State(last, snapshot.version))
+
+
+def _overlapping(files: Sequence[DumpFile], start: EpochSeconds, end: EpochSeconds) -> tuple[DumpFile, ...]:
+    return tuple(f for f in files if f.lo < end and f.hi >= start)
 
 
 def _gaps(files: Sequence[DumpFile], start: EpochSeconds, end: EpochSeconds) -> tuple[Gap, ...]:
@@ -169,13 +186,13 @@ def run(manifest: str, state_path: Path, out_dir: Path) -> Report:
     if the_plan.days:
         out_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="almanac-") as tmp:
-            stage = Path(tmp) / "stage"
-            with _connect(Path(tmp) / "spill") as con:
-                _stage(con, the_plan, stage)
-                written = tuple(
-                    (day, _write_day(con, stage, i, out_dir / _day_file_name(day)))
-                    for i, day in enumerate(the_plan.days)
-                )
+            written = tuple(
+                (day, _ingest_day(the_plan.files, day, Path(tmp), out_dir / _day_file_name(day)))
+                for day in the_plan.days
+            )
+        if not any(rows for _, rows in written):
+            days = ", ".join(day.isoformat() for day in the_plan.days)
+            raise PipelineError(f"upstream finished {days} without one Normal row")
         # Last: its presence means every day file in out_dir is complete.
         the_plan.state.dump(out_dir / STATE_FILE)
     return Report(written, the_plan.state, snapshot.watermark_hi, the_plan.gaps)
@@ -193,7 +210,7 @@ def latest_rows(con: duckdb.DuckDBPyConnection, day_files: Sequence[str]) -> duc
 
 
 def _connect(spill: Path) -> duckdb.DuckDBPyConnection:
-    """preserve_insertion_order = false lets the partitioned COPY stream instead of buffering on a 16 GB runner.
+    """preserve_insertion_order = false lets the stage write stream instead of buffering to keep row order.
 
     Never fetch timestamps into Python: DuckDB needs pytz for that (measured), so time arithmetic
     stays in epoch seconds.
@@ -201,36 +218,27 @@ def _connect(spill: Path) -> duckdb.DuckDBPyConnection:
     return duckdb.connect(config={"preserve_insertion_order": False, "temp_directory": spill.as_posix()})
 
 
-def _stage(con: duckdb.DuckDBPyConnection, the_plan: Plan, stage: Path) -> None:
-    """One pass, not one per day: base row groups span weeks of created_at, so per-day reads re-fetch
-    them (28 per-day passes read 516 GB vs 32.8 GB in one, from file footers).
+def _ingest_day(files: Sequence[DumpFile], day: date, tmp: Path, out: Path) -> int:
+    """The connection is fresh per day: one shared across 7 days peaked at 14.4 GB RSS against 10.9 GB.
 
-    day_index i is days[i], on the same 86,400 s stride as _day_bounds.
-    """
-    start = _day_bounds(the_plan.days[0])[0]
-    end = _day_bounds(the_plan.days[-1])[1]
-    con.sql(
-        f"""
-        SELECT {_SELECT}, CAST(floor((epoch(created_at) - $start) / $day) AS INTEGER) AS day_index
-        FROM read_parquet($files)
-        WHERE created_at >= to_timestamp($start) AND created_at < to_timestamp($end) AND {_KEEP}
-        """,
-        params={"files": [f.url for f in the_plan.files], "start": start, "end": end, "day": _DAY},
-    ).write_parquet(stage.as_posix(), partition_by=["day_index"], compression="zstd")
-    if not any(stage.rglob("*.parquet")):
-        raise PipelineError(f"upstream finished {the_plan.days[0]} to {the_plan.days[-1]} without one Normal row")
-
-
-def _write_day(con: duckdb.DuckDBPyConnection, stage: Path, day_index: int, out: Path) -> int:
-    """Newest copy wins: a base part and a not-yet-rolled-up delta both hold recent rows, and a key
+    Newest copy wins: a base part and a not-yet-rolled-up delta both hold recent rows, and a key
     stored twice in one day differs in created_at (192 of 114,297 keys in partition 116, measured).
     """
-    con.sql(
-        f"""
-        SELECT {_SELECT} FROM read_parquet($stage, hive_partitioning = true)
-        WHERE day_index = $i {_NEWEST_PER_KEY}
-        ORDER BY match_id, player_slot
-        """,
-        params={"stage": f"{stage.as_posix()}/**/*.parquet", "i": day_index},
-    ).write_parquet(out.as_posix(), compression="zstd")
-    return con.execute("SELECT count(*) FROM read_parquet(?)", [out.as_posix()]).fetchone()[0]
+    start, end = _day_bounds(day)
+    stage = tmp / f"stage-{day.isoformat()}.parquet"
+    with _connect(tmp / "spill") as con:
+        con.execute(f"SET threads = {_REMOTE_THREADS}")
+        con.sql(
+            f"""
+            SELECT {_SELECT} FROM read_parquet($files)
+            WHERE created_at >= to_timestamp($start) AND created_at < to_timestamp($end) AND {_KEEP}
+            """,
+            params={"files": [f.url for f in _overlapping(files, start, end)], "start": start, "end": end},
+        ).write_parquet(stage.as_posix(), compression="zstd", row_group_size=_STAGE_ROW_GROUP_SIZE)
+        con.execute(f"SET threads = {_LOCAL_THREADS}")
+        con.sql(
+            f"SELECT {_SELECT} FROM read_parquet($stage) {_NEWEST_PER_KEY} ORDER BY match_id, player_slot",
+            params={"stage": stage.as_posix()},
+        ).write_parquet(out.as_posix(), compression="zstd")
+        stage.unlink()
+        return con.execute("SELECT count(*) FROM read_parquet(?)", [out.as_posix()]).fetchone()[0]

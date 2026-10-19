@@ -3,10 +3,11 @@ from datetime import date
 
 import duckdb
 import pytest
-from fake_dump import DumpRow, FixtureFile, read_rows, seed_state, ts, two_day_dump, write_dump
+from fake_dump import DumpRow, FixtureFile, read_rows, seed_state, ts, two_day_dump, write_dump, write_dump_file
 
 from almanac_pipeline import PipelineError
-from almanac_pipeline.ingest import latest_rows, run
+from almanac_pipeline.ingest import _ingest_day, latest_rows, run
+from almanac_pipeline.manifest import DumpFile, EpochSeconds
 
 DAY_17 = "match_player-2026-10-17.parquet"
 
@@ -81,10 +82,38 @@ def test_a_catch_up_that_starts_before_the_oldest_increment_reports_the_uncovere
     assert report.gaps == ((ts("2026-10-15 00:00"), ts("2026-10-16 15:15")),)
 
 
-def test_first_run_without_a_state_file_backfills_28_days(tmp_path):
-    report = run(two_day_dump(tmp_path), tmp_path / "in" / "state.json", tmp_path / "out")
-    assert [day for day, _ in report.written][::27] == [date(2026, 9, 20), date(2026, 10, 17)]
-    assert len(report.written) == 28
+def test_first_run_without_a_state_file_ingests_only_the_newest_finished_day(tmp_path):
+    out = tmp_path / "out"
+    report = run(two_day_dump(tmp_path), tmp_path / "in" / "state.json", out)
+    assert report.written == ((date(2026, 10, 17), 8),)
+    assert sorted(p.name for p in out.iterdir()) == [DAY_17, "state.json"]
+
+
+def test_a_backlog_longer_than_7_days_is_ingested_over_two_runs_oldest_day_first(tmp_path):
+    old_and_new = FixtureFile(
+        "part-1",
+        "base",
+        hi="2026-10-18 01:13",
+        rows=(DumpRow(1, 0, "2026-10-10 12:00"), DumpRow(2, 0, "2026-10-16 12:00")),
+    )
+    manifest = write_dump(tmp_path / "dump", [old_and_new], watermark_hi="2026-10-18 03:53")
+    first, second = tmp_path / "first", tmp_path / "second"
+
+    report = run(manifest, seed_state(tmp_path, "2026-10-07"), first)
+    assert report.written == (
+        (date(2026, 10, 8), 0),
+        (date(2026, 10, 9), 0),
+        (date(2026, 10, 10), 1),
+        (date(2026, 10, 11), 0),
+        (date(2026, 10, 12), 0),
+        (date(2026, 10, 13), 0),
+        (date(2026, 10, 14), 0),
+    )
+    assert json.loads((first / "state.json").read_text(encoding="utf-8"))["done_through"] == "2026-10-14"
+
+    report = run(manifest, first / "state.json", second)
+    assert report.written == ((date(2026, 10, 15), 0), (date(2026, 10, 16), 1), (date(2026, 10, 17), 0))
+    assert json.loads((second / "state.json").read_text(encoding="utf-8"))["done_through"] == "2026-10-17"
 
 
 def test_rerun_on_the_same_day_writes_nothing_so_the_state_is_never_rewritten(tmp_path):
@@ -138,10 +167,25 @@ def test_latest_rows_keeps_the_newest_copy_across_day_files(tmp_path):
     ]
 
 
-def test_finished_days_without_one_normal_row_fail_and_leave_no_state(tmp_path):
+def test_a_finished_day_without_one_normal_row_fails_and_writes_no_state(tmp_path):
     only_an_old_row = FixtureFile("part-11", "base", hi="2026-10-18 01:13", rows=(DumpRow(11, 0, "2026-10-16 09:00"),))
     manifest = write_dump(tmp_path / "dump", [only_an_old_row], watermark_hi="2026-10-18 03:53")
     out = tmp_path / "out"
-    with pytest.raises(PipelineError, match="without one Normal row"):
+    with pytest.raises(PipelineError, match="upstream finished 2026-10-17 without one Normal row"):
         run(manifest, seed_state(tmp_path, "2026-10-16"), out)
-    assert list(out.glob("*")) == []
+    assert not (out / "state.json").exists()
+
+
+def test_one_day_pass_opens_only_the_files_that_overlap_that_day(tmp_path):
+    base_part = tmp_path / "base.parquet"
+    write_dump_file(base_part, (DumpRow(1, 0, "2026-10-17 05:00"),))
+
+    def increment(name: str, lo: str, hi: str) -> DumpFile:
+        return DumpFile(url=str(tmp_path / name), lo=EpochSeconds(ts(lo)), hi=EpochSeconds(ts(hi)))
+
+    files = (
+        DumpFile(url=str(base_part), lo=EpochSeconds(0), hi=EpochSeconds(ts("2026-10-18 01:00"))),
+        increment("ends-a-second-before-the-day.parquet", "2026-10-16 00:00", "2026-10-16 23:59:59"),
+        increment("starts-when-the-day-ends.parquet", "2026-10-18 00:00", "2026-10-18 01:00"),
+    )
+    assert _ingest_day(files, date(2026, 10, 17), tmp_path, tmp_path / "day.parquet") == 1
