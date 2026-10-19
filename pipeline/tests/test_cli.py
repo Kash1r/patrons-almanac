@@ -1,7 +1,7 @@
 import json
 import time
 
-from fake_dump import seed_state, ts, two_day_dump
+from fake_dump import roster, seed_state, ts, two_day_dump, write_dump_file
 
 from almanac_pipeline.__main__ import main
 
@@ -60,3 +60,37 @@ def test_a_broken_manifest_exits_one_with_an_error_annotation(tmp_path, capsys):
     assert ingest(tmp_path, "2026-10-16", str(manifest)) == 1
     assert capsys.readouterr().err.startswith("::error::")
     assert not (tmp_path / "out" / "state.json").exists()
+
+
+def test_features_writes_a_file_named_after_each_day_file_and_prints_one_line_each(tmp_path, capsys):
+    write_dump_file(tmp_path / "in" / "match_player-2026-10-16.parquet", roster(1))
+    write_dump_file(tmp_path / "in" / "match_player-2026-10-17.parquet", roster(1) + roster(2))
+    days = [str(tmp_path / "in" / f"match_player-2026-10-{d}.parquet") for d in (16, 17)]
+    assert main(["features", "--out", str(tmp_path / "out"), *days]) == 0
+    assert capsys.readouterr().out == "features-2026-10-16: 1 matches\nfeatures-2026-10-17: 2 matches\n"
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == [
+        "features-2026-10-16.parquet",
+        "features-2026-10-17.parquet",
+    ]
+
+
+def test_features_rejects_a_file_that_is_not_a_day_file_and_writes_nothing(tmp_path, capsys):
+    bad = tmp_path / "in" / "match_player-2026-10-17.csv"
+    write_dump_file(bad, roster(1))
+    assert main(["features", "--out", str(tmp_path / "out"), str(bad)]) == 1
+    assert capsys.readouterr().err == (
+        "::error::match_player-2026-10-17.csv is not named match_player-YYYY-MM-DD.parquet\n"
+    )
+    assert list((tmp_path / "out").glob("*")) == []
+
+
+def test_features_fails_on_a_day_with_no_qualifying_match_and_keeps_the_days_before_it(tmp_path, capsys):
+    good = tmp_path / "in" / "match_player-2026-10-16.parquet"
+    empty = tmp_path / "in" / "match_player-2026-10-17.parquet"
+    write_dump_file(good, roster(1))
+    write_dump_file(empty, roster(2, match_mode="CoopBot"))
+    assert main(["features", "--out", str(tmp_path / "out"), str(good), str(empty)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "features-2026-10-16: 1 matches\n"
+    assert captured.err.startswith("::error::match_player-2026-10-17.parquet has no Ranked or Unranked match")
+    assert [p.name for p in (tmp_path / "out").iterdir()] == ["features-2026-10-16.parquet"]
