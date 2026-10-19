@@ -81,6 +81,27 @@ Reading the increments alone loses rows. These numbers shaped the ingest.
 - A live run of the ingest on 2026-10-18 wrote 2026-10-17 in 254 s from a home
   connection: 1,862,964 rows, 156,151 matches, a 215 MB file.
 
+### The ingest on a GitHub runner (2026-10-18 and 19)
+
+The first nightly run took 28 days in one remote pass at DuckDB's default threads. It
+failed on a 4-core, 16 GB `ubuntu-latest` runner. The measurements below shaped the
+current design.
+
+- The remote read waits on request latency, not CPU. Staging one day took 37 s at 256
+  threads, 176 s at 64, and over 10 min at the default of 4.
+- A multi-day pass at a high thread count starved the runner. Even 7 days at 128 threads
+  ended with "The hosted runner lost communication with the server". Process RSS reached
+  about 15 GB, and DuckDB's `memory_limit` did not bound it.
+- One remote pass per day at 64 threads, then dedupe, sort and write at 4 threads, with a
+  fresh DuckDB connection per day, caught up 7 days in 839 s. Peak RSS was 10.9 GB and
+  reset after each day. One day took 120 s at a 6.6 GB peak.
+- Sharing one connection across the 7 days peaked at 14.4 GB.
+- Row counts were identical in every variant. 2026-10-17 had 1,862,964 rows and
+  2026-10-18 had 2,035,021.
+- One pass per day re-reads base row groups that span weeks. A 28-day backfill that way
+  reads 516 GB of kept columns against 32.8 GB in one pass. A deep backfill does not
+  belong in the nightly. If Phase 3 needs more history, it gets its own job.
+
 ## Pull requests, in order
 
 1. **Pipeline skeleton.** `pipeline/` as a uv project (Python 3.12, DuckDB pinned to
@@ -91,7 +112,9 @@ Reading the increments alone loses rows. These numbers shaped the ingest.
    delta files that overlap it, because residuals omit rows already folded into base
    parts. It keeps normal-mode rows and 22 columns (the ones above plus
    `match_outcome`, minus `account_id`), and keeps the newest copy per
-   `(match_id, player_slot)` within a day. The first run takes 28 days. A span that no
+   `(match_id, player_slot)` within a day. It makes one remote pass per day, at 64
+   threads. The first run takes only the newest finished day, and a run takes at most 7
+   days, oldest first, so a long outage catches up over several runs. A span that no
    residual or delta covers, while some base part ends before it, prints a warning.
    Exits non-zero on any failure, so the gate means something.
 3. **Features.** A DuckDB step that builds one row per match: both teams' heroes,
