@@ -25,7 +25,7 @@ _DAY_FILE = re.compile(r"match_player-(\d{4}-\d{2}-\d{2})\.parquet")
 
 
 def _team_sum(per_player: str, team: int) -> str:
-    """The sum is a BIGINT: DuckDB sums UINTEGER into HUGEINT, which Phase 3's readers do not need."""
+    """DuckDB sums a UINTEGER into a HUGEINT, which Parquet stores as DOUBLE (measured). BIGINT keeps integers."""
     return f"CAST(sum({per_player}) FILTER (WHERE team = 'Team{team}') AS BIGINT)"
 
 
