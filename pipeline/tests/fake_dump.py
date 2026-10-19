@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -21,6 +21,16 @@ class DumpRow:
     match_mode: str = "Unranked"
     kills: int = 1
     account_id: int = 256939921
+    team: str = "Team0"
+    hero_id: int = 7
+    net_worth: int = 30000
+    duration_s: int = 1800
+    winning_team: str = "Team0"
+    match_outcome: str = "TeamWin"
+    average_badge_team0: int | None = 85
+    average_badge_team1: int | None = 85
+    time_stamp_s: tuple[int, ...] = (180, 300)
+    souls: tuple[int, ...] = (1000, 2000)
 
 
 @dataclass(frozen=True)
@@ -44,11 +54,7 @@ _SCHEMA = """
 """
 
 _FIXED_VALUES = """
-    1800 AS duration_s, 85 AS average_badge_team0, 85 AS average_badge_team1,
-    'Team0' AS winning_team, 'TeamWin' AS match_outcome, 'Team0' AS team,
-    7 AS hero_id, 2 AS deaths, 3 AS assists, 30000 AS net_worth, true AS won, 50 AS last_hits,
-    [180, 300] AS "stats.time_stamp_s", [1000, 2000] AS "stats.net_worth",
-    [1001] AS "items.item_id", [60] AS "items.game_time_s"
+    2 AS deaths, 3 AS assists, 50 AS last_hits, [1001] AS "items.item_id", [60] AS "items.game_time_s"
 """
 
 
@@ -58,22 +64,59 @@ def write_dump_file(path: Path, rows: tuple[DumpRow, ...]) -> None:
     con.execute(f"CREATE TABLE t ({_SCHEMA})")
     for r in rows:
         con.execute(
-            "INSERT INTO t BY NAME SELECT ? AS match_id, ? AS player_slot, ? AS account_id,"
-            " to_timestamp(?) AS created_at, to_timestamp(?) - INTERVAL 1 HOUR AS start_time,"
-            f" ? AS game_mode, ? AS match_mode, ? AS kills, {_FIXED_VALUES}",
-            [
-                r.match_id,
-                r.player_slot,
-                r.account_id,
-                ts(r.created_at),
-                ts(r.created_at),
-                r.game_mode,
-                r.match_mode,
-                r.kills,
-            ],
+            "INSERT INTO t BY NAME SELECT $match_id AS match_id, $player_slot AS player_slot,"
+            " $account_id AS account_id, to_timestamp($created_at) AS created_at,"
+            " to_timestamp($created_at) - INTERVAL 1 HOUR AS start_time, $game_mode AS game_mode,"
+            " $match_mode AS match_mode, $kills AS kills, $team AS team, $hero_id AS hero_id,"
+            " $net_worth AS net_worth, $duration_s AS duration_s, $winning_team AS winning_team,"
+            " $match_outcome AS match_outcome, $team = $winning_team AS won,"
+            " $average_badge_team0 AS average_badge_team0, $average_badge_team1 AS average_badge_team1,"
+            f' $time_stamp_s AS "stats.time_stamp_s", $souls AS "stats.net_worth", {_FIXED_VALUES}',
+            {
+                **asdict(r),
+                "created_at": ts(r.created_at),
+                "time_stamp_s": list(r.time_stamp_s),
+                "souls": list(r.souls),
+            },
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     con.execute(f"COPY t TO '{path.as_posix()}' (FORMAT parquet)")
+
+
+def roster(
+    match_id: int,
+    team0_heroes: tuple[int, ...] = (1, 2, 3, 4, 5, 6),
+    team1_heroes: tuple[int, ...] = (11, 12, 13, 14, 15, 16),
+    *,
+    team0_souls: tuple[int, ...] = (1000, 2500),
+    team1_souls: tuple[int, ...] = (900, 2000),
+    team0_final: int = 4000,
+    team1_final: int = 3500,
+    created_at: str = "2026-10-17 12:00",
+    **match_fields,
+) -> tuple[DumpRow, ...]:
+    """A match with one row per hero. Player i of a team has 100 * i more souls than the team's value at every
+    sample, so a team sum that took the wrong players would not match.
+    """
+    rows = []
+    for team, heroes, souls, final in (
+        ("Team0", team0_heroes, team0_souls, team0_final),
+        ("Team1", team1_heroes, team1_souls, team1_final),
+    ):
+        for i, hero in enumerate(heroes):
+            rows.append(
+                DumpRow(
+                    match_id,
+                    len(rows),
+                    created_at,
+                    team=team,
+                    hero_id=hero,
+                    net_worth=final + 100 * i,
+                    souls=tuple(s + 100 * i for s in souls),
+                    **match_fields,
+                )
+            )
+    return tuple(rows)
 
 
 def write_dump(root: Path, files: list[FixtureFile], watermark_hi: str, version: int = 1) -> str:
