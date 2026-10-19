@@ -78,3 +78,37 @@ jobs:
           else
             echo "Nothing to publish."
           fi
+
+      # Reconciles against the release, not against the days just ingested: a failed upload leaves a feature missing
+      # and the next run builds it. gh downloads through the API; the public URL served a stale asset once.
+      # Each day builds and uploads on its own, so one bad day does not block the days after it. The step fails at
+      # the end if any day failed.
+      - name: Build and publish the missing features
+        run: |
+          names="$(gh release view "$RELEASE" --json assets --jq '.assets[].name')"
+          day_file='^match_player-([0-9]{4}-[0-9]{2}-[0-9]{2})\.parquet$'
+          missing=()
+          while IFS= read -r name; do
+            if [[ $name =~ $day_file ]] && ! grep -Fqx "features-${BASH_REMATCH[1]}.parquet" <<< "$names"; then
+              missing+=("$name")
+            fi
+          done <<< "$names"
+          if (( ${#missing[@]} == 0 )); then
+            echo "Features up to date."
+            exit 0
+          fi
+
+          patterns=()
+          for name in "${missing[@]}"; do
+            patterns+=(--pattern "$name")
+          done
+          mkdir -p days features
+          gh release download "$RELEASE" "${patterns[@]}" --dir days
+
+          failed=0
+          for name in "${missing[@]}"; do
+            uv run python -m almanac_pipeline features --out features "days/$name" &&
+              gh release upload "$RELEASE" "features/features-${name#match_player-}" --clobber ||
+              failed=1
+          done
+          exit "$failed"
