@@ -35,7 +35,7 @@ def _souls_at(minute: int) -> str:
     return f'list_extract("stats.net_worth", NULLIF({position}, 0))'
 
 
-# start_time, created_at, duration_s, the modes, the badges and winning_team are the same on every
+# start_time, created_at, duration_s, match_mode, the badges and winning_team are the same on every
 # row of a match (0 exceptions in the 154,272 Ranked and Unranked matches of 2026-10-17).
 _COLUMNS: tuple[tuple[str, str], ...] = (
     ("match_id", "match_id"),
@@ -50,7 +50,6 @@ _COLUMNS: tuple[tuple[str, str], ...] = (
     *((f"team{t}_souls_final", _team_sum("net_worth", t)) for t in _TEAMS),
     *((f"team{t}_souls_{m:02d}m", _team_sum(_souls_at(m), t)) for m in SOUL_MINUTES for t in _TEAMS),
 )
-COLUMNS = tuple(name for name, _ in _COLUMNS)
 
 _SELECT = ", ".join(f"{expression} AS {name}" for name, expression in _COLUMNS)
 _WHOLE_MATCH = " AND ".join(
