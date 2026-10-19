@@ -19,15 +19,17 @@ Prepared 2026-10-18. Numbers below were measured that day.
 - **Licence.** The dumps page links deadlock-api's MIT licence. Keep the footer credit;
   credit deadlock-api in the README and model cards.
 - **The pipeline's Parquet lives in GitHub Release assets** (decided 2026-10-18). One
-  release, tag `pipeline-data`, holds a file per finished UTC ingestion day
-  (`match_player-YYYY-MM-DD.parquet`), the features file, and `state.json`. The state
-  is `done_through`, the last ingestion day in the release. A day is the UTC date of a
-  row's `created_at`, when deadlock-api stored it. The nightly workflow uploads day files
-  first and `state.json` last, with `gh release upload --clobber` (needs
+  release, tag `pipeline-data`, holds two files per finished UTC ingestion day
+  (`match_player-YYYY-MM-DD.parquet` and `features-YYYY-MM-DD.parquet`) and `state.json`.
+  The state is `done_through`, the last ingestion day in the release. A day is the UTC
+  date of a row's `created_at`, when deadlock-api stored it. The nightly workflow uploads
+  day files first and `state.json` last, with `gh release upload --clobber` (needs
   `contents: write`). Release downloads redirect and then honour byte ranges (checked:
   `206` for a 100-byte range), so DuckDB can query the files where they sit. Each file
-  can be up to 2 GB; a day is about 215 MB (measured on 2026-10-17). Revisit R2 or
-  Hugging Face if Phase 3 needs more history than that holds comfortably.
+  can be up to 2 GB; a day is about 215 MB (measured on 2026-10-17). A release holds at
+  most 1,000 assets and a day adds two, so the cap arrives in about 16 months. Revisit R2
+  or Hugging Face if Phase 3 needs more history than that holds comfortably, or when the
+  asset cap nears.
 - **One tier list, all ranks combined** (decided 2026-10-18). No per-rank tier lists.
 - **"This week" means since the last patch while that patch is under 14 days old,
   otherwise the last 7 days** (decided 2026-10-18). The home page names the window it
@@ -102,6 +104,39 @@ current design.
   reads 516 GB of kept columns against 32.8 GB in one pass. A deep backfill does not
   belong in the nightly. If Phase 3 needs more history, it gets its own job.
 
+### Feature inputs (2026-10-19)
+
+Measured on the 7 published day files and on 2026-10-17 alone. They fix the shape of the
+features file.
+
+- The 7 days hold 10.8M rows and 902,037 matches. No match, and so no row key
+  (`match_id` with `player_slot`), appears in more than one day file. A day's features
+  need only that day's file.
+- `stats.time_stamp_s` is identical for every player of a match, and it has the same
+  length as `stats.net_worth`. The samples are at 180, 360, 540, 720 and 900 s, then every
+  300 s, then a final one at `duration_s`. Minutes 3, 6, 9, 12, 15, 20, 25, 30, 35 and 40
+  each land on a sample while the match lasts. The last sample equals `duration_s` in all
+  but 1 of the 154,089 kept matches.
+- 2026-10-17 has 154,272 Ranked and Unranked matches. 154,091 have exactly 12 rows split
+  6 and 6, 174 have 11 and 5 have 10. 11 matches have `winning_team = 'Spectator'`, and 2
+  of those have a full roster. The features file keeps 154,089 matches, 22,396 Ranked and
+  131,693 Unranked, and `team0` won 49.4% of them.
+- Every row had `match_outcome = 'TeamWin'`, and `won = (team = winning_team)` held for
+  every row. Within a match, `start_time`, `created_at`, `duration_s`, `match_mode`, both
+  badges, `winning_team` and `match_outcome` never differ between rows (0 exceptions in
+  154,272 matches).
+- `average_badge_team0` and `average_badge_team1` are null for 13,067 of 1.58M Unranked
+  rows, and for 0.75% of the kept matches. The columns stay nullable.
+- Duration is 15 minutes at p1, 36 at p50, 47 at p90 and 58 at p99. So the share of kept
+  matches with no sample at minute 15 is 0.9%, at 30 it is 20%, and at 40 it is 69%.
+- The final `net_worth` is not the last sample. It is higher in 23% of player rows, by 0
+  souls at the median and 128 at p99. `team0_souls_final` sums the `net_worth` column.
+- `created_at - start_time` is 16 hours at p50, 43 days at p90 and about a year at p99.
+  Day files hold many old matches stored late, so the features file keeps `start_time`
+  for Phase 3 to filter by date or patch.
+- Building the features of 2026-10-17's day file (213 MB) on the home machine took 0.7 s
+  and peaked at 0.24 GiB. The features file is 10.1 MB.
+
 ## Pull requests, in order
 
 1. **Pipeline skeleton.** `pipeline/` as a uv project (Python 3.12, DuckDB pinned to
@@ -117,8 +152,18 @@ current design.
    days, oldest first, so a long outage catches up over several runs. A span that no
    residual or delta covers, while some base part ends before it, prints a warning.
    Exits non-zero on any failure, so the gate means something.
-3. **Features.** A DuckDB step that builds one row per match: both teams' heroes,
-   badges, souls at fixed minutes, and the result. This is Phase 3's input.
+3. **Features.** `python -m almanac_pipeline features` builds
+   `features-YYYY-MM-DD.parquet` from `match_player-YYYY-MM-DD.parquet`, the same UTC
+   ingestion day, with 4 local threads. It writes one row per Ranked or Unranked match
+   that has all 12 rows (6 per team), a `TeamWin` outcome and a team as the winner. A row
+   holds the match id, `start_time`, `created_at`, duration, mode, both average badges,
+   `team0_won` (the only label), both teams' sorted heroes, both teams' final souls, and
+   each team's summed `stats.net_worth` at minutes 3, 6, 9, 12, 15, 20, 25, 30, 35 and 40.
+   Those columns are NULL once the match has ended. `SOUL_MINUTES` in `features.py` is the
+   one place the minutes are written. The nightly workflow lists the release, builds a
+   features file for every day file that has none, and uploads each as it finishes. A
+   failed upload leaves that one feature missing and the next run builds it. A day with no
+   qualifying match fails its step. Phase 3's win-probability model reads these files.
 4. **Hero meta.** `/heroes` tier list over all ranks from `/v1/analytics/hero-stats`;
    `/heroes/[id]` with counters, synergies and builds from `hero-counter-stats`,
    `hero-synergy-stats` and `hero-build-stats/{hero_id}`.

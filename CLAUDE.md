@@ -127,3 +127,4 @@ Current phase: **Phase 2**. Plan, decisions and measurements: `docs/phase-2-plan
   `pnpm --filter web exec playwright install chromium`.
 - Pipeline checks, from `pipeline/`: `uv sync`, `uv run ruff check`, `uv run ruff format --check`, `uv run pytest`
 - Ingest by hand, from `pipeline/`: `uv run python -m almanac_pipeline ingest --state in/state.json --out out`. Seeding `in/state.json` and reading the output: `pipeline/README.md`.
+- Features by hand, from `pipeline/`: `uv run python -m almanac_pipeline features --out features days/match_player-2026-10-17.parquet`. Columns: `pipeline/README.md`.
