@@ -84,13 +84,19 @@ def test_features_rejects_a_file_that_is_not_a_day_file_and_writes_nothing(tmp_p
     assert list((tmp_path / "out").glob("*")) == []
 
 
-def test_features_fails_on_a_day_with_no_qualifying_match_and_keeps_the_days_before_it(tmp_path, capsys):
+def test_features_warns_on_a_day_with_no_qualifying_match_and_still_writes_its_file(tmp_path, capsys):
     good = tmp_path / "in" / "match_player-2026-10-16.parquet"
     empty = tmp_path / "in" / "match_player-2026-10-17.parquet"
     write_dump_file(good, roster(1))
     write_dump_file(empty, roster(2, match_mode="CoopBot"))
-    assert main(["features", "--out", str(tmp_path / "out"), str(good), str(empty)]) == 1
-    captured = capsys.readouterr()
-    assert captured.out == "features-2026-10-16: 1 matches\n"
-    assert captured.err.startswith("::error::match_player-2026-10-17.parquet has no Ranked or Unranked match")
-    assert [p.name for p in (tmp_path / "out").iterdir()] == ["features-2026-10-16.parquet"]
+    assert main(["features", "--out", str(tmp_path / "out"), str(good), str(empty)]) == 0
+    assert capsys.readouterr().out == (
+        "features-2026-10-16: 1 matches\n"
+        "features-2026-10-17: 0 matches\n"
+        "::warning::match_player-2026-10-17.parquet has no Ranked or Unranked match"
+        " with a full roster and a winning team\n"
+    )
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == [
+        "features-2026-10-16.parquet",
+        "features-2026-10-17.parquet",
+    ]

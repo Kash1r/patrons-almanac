@@ -42,6 +42,8 @@ def _features(args: argparse.Namespace) -> int:
         name = features.feature_file_name(day_file)
         matches = features.build(day_file, args.out / name)
         print(f"{Path(name).stem}: {matches:,} matches")
+        if matches == 0:
+            print(f"::warning::{day_file.name} has no Ranked or Unranked match with a full roster and a winning team")
     return 0
 
 

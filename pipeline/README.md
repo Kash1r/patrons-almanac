@@ -135,14 +135,14 @@ uv run python -m almanac_pipeline features --out features days/match_player-2026
 - `DAY_FILE` arguments must be named `match_player-YYYY-MM-DD.parquet`. The command
   writes `features-YYYY-MM-DD.parquet` for each into `--out` and prints one line per
   file, such as `features-2026-10-17: 154,089 matches`.
-- A file with another name, or a day with no qualifying match, exits 1 with an
-  `::error::` line. The command stops there. Earlier files stay, and no empty file is
-  left behind.
+- A file with another name exits 1 with an `::error::` line. The command stops there,
+  and earlier files stay.
+- A day with no qualifying match still gets a features file with no rows, and the
+  command prints a `::warning::` line. Ingest treats an empty day the same way.
 - It reads the local day file only, with 4 threads. One day took 0.7 s and 0.24 GiB.
   It never calls GitHub.
 
 The nightly workflow runs this after publishing. It lists the release, downloads
 the day files that have no features file with `gh release download`, and uploads each
 features file as soon as it is built. A failed day leaves only its own file missing,
-fails the step, and is retried the next night. A day that never has a qualifying match
-fails every night. Delete that day file from the release to clear it.
+fails the step, and is retried the next night.

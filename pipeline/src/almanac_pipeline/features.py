@@ -83,14 +83,11 @@ def build(day_file: Path, out: Path) -> int:
     """Writes the features of one day file to out and returns the matches written.
 
     A match is kept only when all 12 of its rows are here, 6 per team, with a TeamWin outcome and a
-    team as the winner. A day that keeps none fails and leaves no file, so nothing empty gets uploaded.
+    team as the winner. A day that keeps none still gets its file, with the full schema, so the nightly
+    reconciliation counts it as built instead of retrying it every night.
     """
     out.parent.mkdir(parents=True, exist_ok=True)
     with duckdb.connect() as con:
         con.execute(f"SET threads = {_THREADS}")
         con.sql(_QUERY, params={"day": day_file.as_posix()}).write_parquet(out.as_posix(), compression="zstd")
-        matches = con.execute("SELECT count(*) FROM read_parquet(?)", [out.as_posix()]).fetchone()[0]
-    if matches == 0:
-        out.unlink()
-        raise PipelineError(f"{day_file.name} has no Ranked or Unranked match with a full roster and a winning team")
-    return matches
+        return con.execute("SELECT count(*) FROM read_parquet(?)", [out.as_posix()]).fetchone()[0]

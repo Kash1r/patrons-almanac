@@ -169,10 +169,11 @@ def test_the_schema_is_exactly_the_documented_columns_in_order(tmp_path):
     ]
 
 
-def test_a_day_without_a_qualifying_match_raises_and_leaves_no_file(tmp_path):
-    with pytest.raises(PipelineError, match=f"{DAY} has no Ranked or Unranked match"):
-        build_day(tmp_path, roster(2, match_mode="CoopBot"))
-    assert list((tmp_path / "out").glob("*")) == []
+def test_a_day_without_a_qualifying_match_still_gets_an_empty_file_with_the_schema(tmp_path):
+    matches, out = build_day(tmp_path, roster(2, match_mode="CoopBot"))
+    assert matches == 0
+    assert read_matches(out) == []
+    assert len(duckdb.sql(f"DESCRIBE SELECT * FROM '{out.as_posix()}'").fetchall()) == 32
 
 
 def test_the_feature_file_is_named_after_the_day_file(tmp_path):

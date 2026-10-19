@@ -163,7 +163,8 @@ features file.
    one place the minutes are written. The nightly workflow lists the release, builds a
    features file for every day file that has none, and uploads each as it finishes. A
    failed upload leaves that one feature missing and the next run builds it. A day with no
-   qualifying match fails its step. Phase 3's win-probability model reads these files.
+   qualifying match gets an empty file and a warning, so it is not retried every night.
+   Phase 3's win-probability model reads these files.
 4. **Hero meta.** `/heroes` tier list over all ranks from `/v1/analytics/hero-stats`;
    `/heroes/[id]` with counters, synergies and builds from `hero-counter-stats`,
    `hero-synergy-stats` and `hero-build-stats/{hero_id}`.
